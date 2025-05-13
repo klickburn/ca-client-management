@@ -1,0 +1,143 @@
+.client-list-container {
+    padding: 1rem;
+}
+
+.client-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.client-search {
+    margin-bottom: 1.5rem;
+}
+
+.client-search input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.create-client-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.create-client-button:hover {
+    background-color: #388e3c;
+}
+
+.client-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.client-card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1.2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background-color: #fff;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.client-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.client-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.client-type {
+    background-color: #f0f0f0;
+    border-radius: 20px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: #555;
+}
+
+.client-details {
+    margin-bottom: 1rem;
+}
+
+.client-detail {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.client-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.action-button {
+    padding: 0.5rem 0.75rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.3s;
+}
+
+.view-button {
+    background-color: #2196F3;
+    color: white;
+}
+
+.view-button:hover {
+    background-color: #1976D2;
+}
+
+.delete-button {
+    background-color: #F44336;
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: #D32F2F;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.no-clients-message {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+}

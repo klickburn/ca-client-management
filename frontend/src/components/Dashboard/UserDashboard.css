@@ -1,0 +1,106 @@
+.user-dashboard {
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.welcome-section {
+  margin-bottom: 30px;
+}
+
+.welcome-section h1 {
+  font-size: 24px;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.welcome-section p {
+  color: #666;
+  line-height: 1.5;
+}
+
+.client-search {
+  margin-bottom: 20px;
+}
+
+.client-search input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.client-list {
+  margin-top: 20px;
+}
+
+.client-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  margin-bottom: 15px;
+  transition: transform 0.2s;
+}
+
+.client-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.client-name {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.client-details {
+  margin-top: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.client-detail {
+  margin-bottom: 4px;
+}
+
+.client-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.action-button {
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.view-button {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.view-button:hover {
+  background-color: #bbdefb;
+}
+
+.dashboard-content {
+  flex: 1;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.client-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}

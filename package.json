@@ -1,0 +1,30 @@
+{
+  "name": "ca-client-management",
+  "version": "1.0.0",
+  "description": "A web-based client database management application for CA firms in India",
+  "main": "index.js",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm start",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "setup": "node backend/seed.js",
+    "test": "node backend/test-script.js",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix frontend && npm run build --prefix frontend"
+  },
+  "keywords": [
+    "client-management",
+    "ca",
+    "accounting",
+    "mongodb",
+    "express",
+    "react",
+    "node"
+  ],
+  "author": "KlickBurn",
+  "license": "MIT",
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
