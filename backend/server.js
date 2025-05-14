@@ -12,8 +12,14 @@ const connectDB = require('./config/database');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middleware
-app.use(cors());
+// Enhanced CORS configuration
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true, // Allow cookies to be sent with requests
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'], // Allowed headers
+  exposedHeaders: ['Content-Range', 'X-Content-Range'] // Expose these headers
+}));
 app.use(bodyParser.json());
 
 // Connect to MongoDB

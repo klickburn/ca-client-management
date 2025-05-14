@@ -1,16 +1,26 @@
-import axios from 'axios';
+import api from './api';
 
-const API_URL = 'http://localhost:5001/api/auth/';
+// Dynamic API path for auth
+const AUTH_PATH = 'auth/'; 
 
 const login = async (username, password) => {
-    const response = await axios.post(API_URL + 'login', {
-        username,
-        password
-    });
-    if (response.data.token) {
-        localStorage.setItem('user', JSON.stringify(response.data));
+    try {
+        console.log('Login attempt with:', { username, url: api.defaults.baseURL + AUTH_PATH + 'login' });
+        const response = await api.post(AUTH_PATH + 'login', {
+            username,
+            password
+        });
+        if (response.data && response.data.token) {
+            localStorage.setItem('user', JSON.stringify(response.data));
+            console.log('Login successful, token stored');
+        } else {
+            console.warn('Login response missing token:', response.data);
+        }
+        return response.data;
+    } catch (error) {
+        console.error('Login error:', error.response?.data || error.message);
+        throw error;
     }
-    return response.data;
 };
 
 const logout = () => {
@@ -18,16 +28,28 @@ const logout = () => {
 };
 
 const register = async (username, password, role) => {
-    const response = await axios.post(API_URL + 'register', {
-        username,
-        password,
-        role
-    });
-    return response.data;
+    try {
+        const response = await api.post(AUTH_PATH + 'register', {
+            username,
+            password,
+            role
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Registration error:', error);
+        throw error;
+    }
 };
 
 const getCurrentUser = () => {
-    return JSON.parse(localStorage.getItem('user'));
+    try {
+        const userStr = localStorage.getItem('user');
+        return userStr ? JSON.parse(userStr) : null;
+    } catch (error) {
+        console.error('Error getting current user:', error);
+        localStorage.removeItem('user'); // Clear corrupt data
+        return null;
+    }
 };
 
 export const authService = {
