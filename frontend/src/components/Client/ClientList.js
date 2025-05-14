@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import clientService from '../../services/clientService';
+import { AuthContext } from '../../context/AuthContext';
 import './ClientList.css';
 
 const ClientList = ({ onClientSelect, onCreateClient }) => {
@@ -7,6 +8,7 @@ const ClientList = ({ onClientSelect, onCreateClient }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState(null);
+    const { user } = useContext(AuthContext);
 
     useEffect(() => {
         fetchClients();
@@ -103,12 +105,14 @@ const ClientList = ({ onClientSelect, onCreateClient }) => {
                                         >
                                             View Details
                                         </button>
-                                        <button 
-                                            className="action-button delete-button"
-                                            onClick={() => handleDeleteClient(client._id)}
-                                        >
-                                            Delete
-                                        </button>
+                                        {user && user.role === 'admin' && (
+                                            <button 
+                                                className="action-button delete-button"
+                                                onClick={() => handleDeleteClient(client._id)}
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}

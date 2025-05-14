@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import ClientList from './ClientList';
 import ClientForm from './ClientForm';
 import ClientDetail from './ClientDetail';
 import clientService from '../../services/clientService';
+import { AuthContext } from '../../context/AuthContext';
 import './ClientManager.css';
 
 const VIEW_MODES = {
@@ -18,6 +19,7 @@ const ClientManager = () => {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const { user } = useContext(AuthContext);
 
     useEffect(() => {
         fetchClients();
@@ -64,6 +66,11 @@ const ClientManager = () => {
     };
 
     const handleDeleteClient = async (clientId) => {
+        if (user && user.role !== 'admin') {
+            setError('Only admin users can delete clients.');
+            return;
+        }
+        
         if (window.confirm('Are you sure you want to delete this client?')) {
             try {
                 await clientService.deleteClient(clientId);

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import documentService from '../../services/documentService';
+import { AuthContext } from '../../context/AuthContext';
 import './DocumentManager.css';
 
 const DocumentManager = ({ clientId }) => {
@@ -8,6 +9,7 @@ const DocumentManager = ({ clientId }) => {
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState(null);
     const [fileToUpload, setFileToUpload] = useState(null);
+    const { user } = useContext(AuthContext);
 
     useEffect(() => {
         if (clientId) {
@@ -88,6 +90,12 @@ const DocumentManager = ({ clientId }) => {
     };
 
     const handleDelete = async (documentId) => {
+        // Only allow admins to delete documents
+        if (!user || user.role !== 'admin') {
+            setError('Only administrators can delete documents');
+            return;
+        }
+        
         if (window.confirm('Are you sure you want to delete this document?')) {
             try {
                 setError(null);
@@ -113,7 +121,8 @@ const DocumentManager = ({ clientId }) => {
             await documentService.downloadDocument(clientId, documentId, documentName);
         } catch (err) {
             console.error('Error viewing document:', err);
-            setError('Failed to view document. Please try again.');
+            const errorMessage = err.message || 'Failed to view document. Please try again.';
+            setError(errorMessage);
         }
     };
 
@@ -179,6 +188,8 @@ const DocumentManager = ({ clientId }) => {
             <div className="document-list">
                 <h3>Client Documents</h3>
                 
+                {error && <div className="error-message">{error}</div>}
+                
                 {loading ? (
                     <div className="loading-indicator">Loading documents...</div>
                 ) : documents.length === 0 ? (
@@ -194,8 +205,7 @@ const DocumentManager = ({ clientId }) => {
                                     <th>Uploaded</th>
                                     <th>Actions</th>
                                 </tr>
-                            </thead>
-                            <tbody>
+                            </thead>                                <tbody>
                                 {documents.map(doc => (
                                     <tr key={doc._id}>
                                         <td className="document-name">
@@ -204,19 +214,33 @@ const DocumentManager = ({ clientId }) => {
                                         </td>
                                         <td>{doc.type.split('/')[1].toUpperCase()}</td>
                                         <td>{formatFileSize(doc.size)}</td>
-                                        <td>{formatDate(doc.uploadedAt)}</td>                                            <td className="document-actions">
+                                        <td>{formatDate(doc.uploadedAt)}</td>                                            
+                                        <td className="document-actions">
                                             <button 
                                                 className="action-button view-button"
                                                 onClick={() => handleViewDocument(doc._id, doc.name)}
+                                                title="Download this file to your computer"
                                             >
-                                                View
+                                                Download
                                             </button>
-                                            <button 
-                                                className="action-button delete-button"
-                                                onClick={() => handleDelete(doc._id)}
+                                            <a 
+                                                href={documentService.getDocumentUrl(clientId, doc._id)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="action-button view-online-button"
+                                                title="View this file in a new tab"
                                             >
-                                                Delete
-                                            </button>
+                                                View Online
+                                            </a>
+                                            {user && user.role === 'admin' && (
+                                                <button 
+                                                    className="action-button delete-button"
+                                                    onClick={() => handleDelete(doc._id)}
+                                                    title="Delete this document permanently"
+                                                >
+                                                    Delete
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

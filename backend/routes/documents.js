@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const documentController = require('../controllers/documentController');
 const authMiddleware = require('../middleware/auth');
+const roleCheck = require('../middleware/roleCheck');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -47,6 +48,6 @@ const upload = multer({
 router.post('/:clientId/documents', authMiddleware, upload.single('document'), documentController.uploadDocument);
 router.get('/:clientId/documents', authMiddleware, documentController.getDocuments);
 router.get('/:clientId/documents/:documentId', authMiddleware, documentController.getDocument);
-router.delete('/:clientId/documents/:documentId', authMiddleware, documentController.deleteDocument);
+router.delete('/:clientId/documents/:documentId', authMiddleware, roleCheck(['admin']), documentController.deleteDocument);
 
 module.exports = router;

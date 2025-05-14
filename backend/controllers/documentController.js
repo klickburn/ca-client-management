@@ -77,8 +77,35 @@ exports.getDocument = async (req, res) => {
             return res.status(404).json({ message: 'Document not found' });
         }
 
-        // Return file
-        res.sendFile(path.resolve(document.path));
+        // Check if file exists
+        const filePath = path.resolve(document.path);
+        if (!fs.existsSync(filePath)) {
+            console.error(`File not found at path: ${filePath}`);
+            return res.status(404).json({ message: 'Document file not found on server' });
+        }
+
+        // Get file stats to determine the file size
+        const stat = fs.statSync(filePath);
+        
+        // Set appropriate content type and headers for better download handling
+        res.setHeader('Content-Type', document.type || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.name)}"`);
+        res.setHeader('Content-Length', stat.size);
+        res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
+        
+        // Stream the file to avoid memory issues with large files
+        const fileStream = fs.createReadStream(filePath);
+        
+        // Handle stream errors
+        fileStream.on('error', (error) => {
+            console.error('Error streaming file:', error);
+            if (!res.headersSent) {
+                res.status(500).json({ message: 'Error streaming file' });
+            }
+        });
+        
+        // Pipe the file to the response
+        fileStream.pipe(res);
     } catch (error) {
         console.error('Error getting document:', error);
         res.status(500).json({ message: 'Server error', error: error.message });

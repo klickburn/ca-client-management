@@ -18,6 +18,14 @@ const clientSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    dateOfBirth: {
+        type: Date,
+    },
+    aadharNumber: {
+        type: String,
+        unique: true,
+        sparse: true,
+    },
     panNumber: {
         type: String,
         unique: true,
@@ -28,6 +36,56 @@ const clientSchema = new mongoose.Schema({
         unique: true,
         sparse: true,
     },
+    tanNumber: {
+        type: String,
+        unique: true,
+        sparse: true,
+    },
+    credentials: {
+        incomeTax: {
+            username: String,
+            password: String
+        },
+        gst: {
+            username: String,
+            password: String
+        },
+        tan: {
+            username: String,
+            password: String
+        },
+        traces: {
+            username: String,
+            password: String
+        }
+    },
+    bankAccounts: [{
+        bankName: String,
+        accountNumber: String,
+        customerId: String,
+        password: String,
+        accountType: String,
+        ifscCode: String,
+        branch: String
+    }],
+    loanAccounts: [{
+        loanType: String,
+        lenderName: String,
+        accountNumber: String,
+        amount: Number,
+        interestRate: String,
+        startDate: Date,
+        endDate: Date,
+        emiAmount: Number,
+        username: String,
+        password: String
+    }],
+    dematAccounts: [{
+        brokerName: String,
+        accountNumber: String,
+        username: String,
+        password: String
+    }],
     clientType: {
         type: String,
         enum: ['Individual', 'Partnership', 'LLP', 'Pvt Ltd', 'Public Ltd', 'HUF', 'Other'],
