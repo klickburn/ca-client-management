@@ -7,6 +7,7 @@ const initialFormState = {
     email: '',
     phone: '',
     address: '',
+    addresses: [],
     dateOfBirth: '',
     aadharNumber: '',
     panNumber: '',
@@ -37,6 +38,12 @@ const initialFormState = {
     services: [],
     notes: ''
 };
+
+const addressTypeOptions = [
+    'Home',
+    'Office',
+    'Other'
+];
 
 const serviceOptions = [
     'Income Tax Filing',
@@ -79,6 +86,17 @@ const ClientForm = ({ client, onSave, onCancel }) => {
     const [newDematAccount, setNewDematAccount] = useState({
         brokerName: '', accountNumber: '', username: '', password: ''
     });
+    
+    // State for managing address entries
+    const [newAddress, setNewAddress] = useState({
+        addressType: 'Home',
+        streetAddress: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        isPrimary: false
+    });
+    const [addressErrors, setAddressErrors] = useState({});
 
     useEffect(() => {
         if (client) {
@@ -87,6 +105,7 @@ const ClientForm = ({ client, onSave, onCancel }) => {
                 email: client.email || '',
                 phone: client.phone || '',
                 address: client.address || '',
+                addresses: client.addresses || [],
                 dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth).toISOString().split('T')[0] : '',
                 aadharNumber: client.aadharNumber || '',
                 panNumber: client.panNumber || '',
@@ -172,6 +191,14 @@ const ClientForm = ({ client, onSave, onCancel }) => {
         }
         
         if (!formData.address.trim()) newErrors.address = 'Address is required';
+        
+        // Validation for multiple addresses
+        if (formData.addresses.length > 0) {
+            // Ensure at least one address is marked as primary
+            if (!formData.addresses.some(addr => addr.isPrimary)) {
+                newErrors.addresses = 'One address must be marked as primary';
+            }
+        }
         
         if (formData.aadharNumber && !/^\d{12}$/.test(formData.aadharNumber)) {
             newErrors.aadharNumber = 'Aadhar number should be 12 digits';
@@ -306,6 +333,106 @@ const ClientForm = ({ client, onSave, onCancel }) => {
         }));
     };
 
+    // Address field change handler
+    const handleAddressChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        
+        setNewAddress(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+        
+        // Clear error when user types
+        if (addressErrors[name]) {
+            setAddressErrors(prev => ({ ...prev, [name]: '' }));
+        }
+    };
+    
+    // Generate a unique ID for addresses
+    const generateAddressId = () => {
+        return 'addr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    };
+    
+    // Add new address to the list
+    const addAddress = () => {
+        // Validate address fields
+        const newErrors = {};
+        if (!newAddress.streetAddress.trim()) newErrors.streetAddress = 'Street address is required';
+        if (!newAddress.city.trim()) newErrors.city = 'City is required';
+        if (!newAddress.state.trim()) newErrors.state = 'State is required';
+        if (!newAddress.postalCode.trim()) newErrors.postalCode = 'Postal code is required';
+        
+        if (Object.keys(newErrors).length > 0) {
+            setAddressErrors(newErrors);
+            return;
+        }
+        
+        // Create a new address with unique ID
+        const addressWithId = {
+            ...newAddress,
+            id: generateAddressId()
+        };
+        
+        // If this is set as primary, update all other addresses
+        const updatedAddresses = [...formData.addresses];
+        if (newAddress.isPrimary) {
+            updatedAddresses.forEach(addr => {
+                addr.isPrimary = false;
+            });
+        }
+        
+        // Add the new address
+        updatedAddresses.push(addressWithId);
+        
+        // Update form data
+        setFormData(prev => ({
+            ...prev,
+            addresses: updatedAddresses
+        }));
+        
+        // Reset the new address form
+        setNewAddress({
+            addressType: 'Home',
+            streetAddress: '',
+            city: '',
+            state: '',
+            postalCode: '',
+            isPrimary: false
+        });
+        
+        // Clear any errors
+        setAddressErrors({});
+    };
+    
+    // Remove an address from the list
+    const removeAddress = (addressId) => {
+        const updatedAddresses = formData.addresses.filter(addr => addr.id !== addressId);
+        
+        // If we removed the primary address and there are other addresses, set the first one as primary
+        const hadPrimary = formData.addresses.find(addr => addr.id === addressId)?.isPrimary;
+        if (hadPrimary && updatedAddresses.length > 0) {
+            updatedAddresses[0].isPrimary = true;
+        }
+        
+        setFormData(prev => ({
+            ...prev,
+            addresses: updatedAddresses
+        }));
+    };
+    
+    // Set an address as primary
+    const setPrimaryAddress = (addressId) => {
+        const updatedAddresses = formData.addresses.map(addr => ({
+            ...addr,
+            isPrimary: addr.id === addressId
+        }));
+        
+        setFormData(prev => ({
+            ...prev,
+            addresses: updatedAddresses
+        }));
+    };
+
     return (
         <div className="client-form-container">
             <h2>{isEditMode ? 'Edit Client' : 'Create New Client'}</h2>
@@ -350,6 +477,7 @@ const ClientForm = ({ client, onSave, onCancel }) => {
             <form onSubmit={handleSubmit} className="client-form">
                 {/* Basic Information Tab */}
                 {activeTab === 'basic' && (
+                    <>
                     <div className="form-tab-content">
                         <div className="form-section">
                             <h3>Basic Information</h3>
@@ -396,7 +524,7 @@ const ClientForm = ({ client, onSave, onCancel }) => {
                             </div>
                             
                             <div className="form-group">
-                                <label htmlFor="address">Address *</label>
+                                <label htmlFor="address">Primary Address *</label>
                                 <textarea
                                     id="address"
                                     name="address"
@@ -405,6 +533,152 @@ const ClientForm = ({ client, onSave, onCancel }) => {
                                     className={errors.address ? 'error' : ''}
                                 />
                                 {errors.address && <div className="error-text">{errors.address}</div>}
+                            </div>
+                            
+                            {/* Additional Addresses Section */}
+                            <div className="form-section">
+                                <h4>Additional Addresses</h4>
+                                {errors.addresses && <div className="error-text">{errors.addresses}</div>}
+                                
+                                {formData.addresses.length > 0 && (
+                                    <div className="accounts-table-container">
+                                        <table className="accounts-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Type</th>
+                                                    <th>Address</th>
+                                                    <th>City</th>
+                                                    <th>State</th>
+                                                    <th>Postal Code</th>
+                                                    <th>Primary</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {formData.addresses.map((address) => (
+                                                    <tr key={address.id}>
+                                                        <td>{address.addressType}</td>
+                                                        <td>{address.streetAddress}</td>
+                                                        <td>{address.city}</td>
+                                                        <td>{address.state}</td>
+                                                        <td>{address.postalCode}</td>
+                                                        <td>
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={address.isPrimary}
+                                                                onChange={() => setPrimaryAddress(address.id)}
+                                                                disabled={address.isPrimary}
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <button 
+                                                                type="button" 
+                                                                className="delete-button"
+                                                                onClick={() => removeAddress(address.id)}
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                                
+                                <div className="add-account-form">
+                                    <h4>Add New Address</h4>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label htmlFor="addressType">Address Type</label>
+                                            <select
+                                                id="addressType"
+                                                name="addressType"
+                                                value={newAddress.addressType}
+                                                onChange={handleAddressChange}
+                                            >
+                                                {addressTypeOptions.map(type => (
+                                                    <option key={type} value={type}>{type}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label htmlFor="streetAddress">Street Address *</label>
+                                            <input
+                                                type="text"
+                                                id="streetAddress"
+                                                name="streetAddress"
+                                                value={newAddress.streetAddress}
+                                                onChange={handleAddressChange}
+                                                className={addressErrors.streetAddress ? 'error' : ''}
+                                            />
+                                            {addressErrors.streetAddress && <div className="error-text">{addressErrors.streetAddress}</div>}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label htmlFor="city">City *</label>
+                                            <input
+                                                type="text"
+                                                id="city"
+                                                name="city"
+                                                value={newAddress.city}
+                                                onChange={handleAddressChange}
+                                                className={addressErrors.city ? 'error' : ''}
+                                            />
+                                            {addressErrors.city && <div className="error-text">{addressErrors.city}</div>}
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label htmlFor="state">State *</label>
+                                            <input
+                                                type="text"
+                                                id="state"
+                                                name="state"
+                                                value={newAddress.state}
+                                                onChange={handleAddressChange}
+                                                className={addressErrors.state ? 'error' : ''}
+                                            />
+                                            {addressErrors.state && <div className="error-text">{addressErrors.state}</div>}
+                                        </div>
+                                        
+                                        <div className="form-group">
+                                            <label htmlFor="postalCode">Postal Code *</label>
+                                            <input
+                                                type="text"
+                                                id="postalCode"
+                                                name="postalCode"
+                                                value={newAddress.postalCode}
+                                                onChange={handleAddressChange}
+                                                className={addressErrors.postalCode ? 'error' : ''}
+                                            />
+                                            {addressErrors.postalCode && <div className="error-text">{addressErrors.postalCode}</div>}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="form-row">
+                                        <div className="form-group checkbox-group">
+                                            <input
+                                                type="checkbox"
+                                                id="isPrimary"
+                                                name="isPrimary"
+                                                checked={newAddress.isPrimary}
+                                                onChange={handleAddressChange}
+                                            />
+                                            <label htmlFor="isPrimary">Set as Primary Address</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <button 
+                                        type="button" 
+                                        className="add-button"
+                                        onClick={addAddress}
+                                    >
+                                        Add Address
+                                    </button>
+                                </div>
                             </div>
                             
                             <div className="form-row">
@@ -434,24 +708,25 @@ const ClientForm = ({ client, onSave, onCancel }) => {
                                 </div>
                             </div>
                         </div>
-                        
-                        <div className="form-section">
-                            <h3>Services</h3>
-                            <div className="services-checkboxes">
-                                {serviceOptions.map(service => (
-                                    <div key={service} className="checkbox-group">
-                                        <input
-                                            type="checkbox"
-                                            id={`service-${service}`}
-                                            checked={formData.services.includes(service)}
-                                            onChange={() => handleServiceChange(service)}
-                                        />
-                                        <label htmlFor={`service-${service}`}>{service}</label>
-                                    </div>
-                                ))}
-                            </div>
+                    </div>
+                    
+                    <div className="form-section">
+                        <h3>Services</h3>
+                        <div className="services-checkboxes">
+                            {serviceOptions.map(service => (
+                                <div key={service} className="checkbox-group">
+                                    <input
+                                        type="checkbox"
+                                        id={`service-${service}`}
+                                        checked={formData.services.includes(service)}
+                                        onChange={() => handleServiceChange(service)}
+                                    />
+                                    <label htmlFor={`service-${service}`}>{service}</label>
+                                </div>
+                            ))}
                         </div>
                     </div>
+                    </>
                 )}
                 
                 {/* Identity Documents Tab */}

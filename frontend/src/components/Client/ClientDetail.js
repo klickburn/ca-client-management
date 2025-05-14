@@ -87,10 +87,35 @@ const ClientDetail = ({ client, onEdit, onBack }) => {
                                         <a href={`tel:${client.phone}`}>{client.phone}</a>
                                     </span>
                                 </div>
+                                
+                                {/* Primary Address */}
                                 <div className="detail-item">
-                                    <span className="detail-label">Address:</span>
+                                    <span className="detail-label">Primary Address:</span>
                                     <span className="detail-value">{client.address}</span>
                                 </div>
+                                
+                                {/* Additional Addresses */}
+                                {client.addresses && client.addresses.length > 0 && (
+                                    <div className="detail-item addresses-container">
+                                        <span className="detail-label">Additional Addresses:</span>
+                                        <div className="addresses-list">
+                                            {client.addresses.map((address, index) => (
+                                                <div key={address.id || index} className="address-item">
+                                                    <div className="address-header">
+                                                        <span className="address-type">{address.addressType}</span>
+                                                        {address.isPrimary && (
+                                                            <span className="primary-badge">Primary</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="address-content">
+                                                        <p>{address.streetAddress}</p>
+                                                        <p>{address.city}, {address.state} {address.postalCode}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="detail-section">

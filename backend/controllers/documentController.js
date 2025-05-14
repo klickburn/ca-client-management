@@ -30,6 +30,9 @@ exports.uploadDocument = async (req, res) => {
             path: req.file.path,
             type: req.file.mimetype,
             size: req.file.size,
+            category: req.body.category || 'Other',
+            fiscalYear: req.body.fiscalYear || '',
+            notes: req.body.notes || '',
             uploadedAt: Date.now(),
             uploadedBy: req.user.id
         };
@@ -49,13 +52,27 @@ exports.uploadDocument = async (req, res) => {
 exports.getDocuments = async (req, res) => {
     try {
         const { clientId } = req.params;
+        const { category, fiscalYear } = req.query;
+        
         const client = await Client.findById(clientId).populate('documents.uploadedBy', 'username');
         
         if (!client) {
             return res.status(404).json({ message: 'Client not found' });
         }
 
-        res.status(200).json(client.documents);
+        let documents = client.documents;
+        
+        // Filter by category if provided
+        if (category) {
+            documents = documents.filter(doc => doc.category === category);
+        }
+        
+        // Filter by fiscal year if provided
+        if (fiscalYear) {
+            documents = documents.filter(doc => doc.fiscalYear === fiscalYear);
+        }
+
+        res.status(200).json(documents);
     } catch (error) {
         console.error('Error getting documents:', error);
         res.status(500).json({ message: 'Server error', error: error.message });

@@ -3,6 +3,30 @@ import documentService from '../../services/documentService';
 import { AuthContext } from '../../context/AuthContext';
 import './DocumentManager.css';
 
+// Document categories
+const documentCategories = [
+    'Statement',
+    'Ledgers',
+    'Financials',
+    'Returns',
+    'Vendor Registration',
+    'Property Details',
+    'Other'
+];
+
+// Generate fiscal years (current year and 10 years back)
+const generateFiscalYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = 0; i < 11; i++) {
+        const year = currentYear - i;
+        years.push(`${year-1}-${year}`);
+    }
+    return years;
+};
+
+const fiscalYears = generateFiscalYears();
+
 const DocumentManager = ({ clientId }) => {
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -10,6 +34,13 @@ const DocumentManager = ({ clientId }) => {
     const [error, setError] = useState(null);
     const [fileToUpload, setFileToUpload] = useState(null);
     const { user } = useContext(AuthContext);
+    
+    // New state for document filters and metadata
+    const [documentCategory, setDocumentCategory] = useState('Other');
+    const [documentFiscalYear, setDocumentFiscalYear] = useState(fiscalYears[0]);
+    const [documentNotes, setDocumentNotes] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
+    const [filterFiscalYear, setFilterFiscalYear] = useState('');
 
     useEffect(() => {
         if (clientId) {
@@ -19,12 +50,13 @@ const DocumentManager = ({ clientId }) => {
             setDocuments([]);
             setLoading(false);
         }
-    }, [clientId]);
+    }, [clientId, filterCategory, filterFiscalYear]);
 
     const fetchDocuments = async () => {
         try {
             setLoading(true);
-            const docs = await documentService.getDocuments(clientId);
+            // Pass filter parameters to the API
+            const docs = await documentService.getDocuments(clientId, filterCategory, filterFiscalYear);
             setDocuments(docs);
             setError(null);
         } catch (err) {
@@ -73,13 +105,28 @@ const DocumentManager = ({ clientId }) => {
         try {
             setUploading(true);
             setError(null);
-            await documentService.uploadDocument(clientId, fileToUpload);
+            
+            // Include metadata with the upload
+            await documentService.uploadDocument(
+                clientId, 
+                fileToUpload, 
+                documentCategory, 
+                documentFiscalYear, 
+                documentNotes
+            );
+            
+            // Reset form
             setFileToUpload(null);
+            setDocumentCategory('Other');
+            setDocumentFiscalYear(fiscalYears[0]);
+            setDocumentNotes('');
+            
             // Reset the file input
             const fileInput = document.getElementById('document-upload');
             if (fileInput) {
                 fileInput.value = '';
             }
+            
             await fetchDocuments();
         } catch (err) {
             console.error('Error uploading document:', err);
@@ -154,17 +201,61 @@ const DocumentManager = ({ clientId }) => {
                 <h3>Upload Document</h3>
                 {error && <div className="error-message">{error}</div>}
                 
-                <div className="upload-controls">
-                    <input 
-                        type="file" 
-                        onChange={handleFileChange}
-                        className="file-input"
-                        id="document-upload"
-                        disabled={uploading}
-                    />
-                    <label htmlFor="document-upload" className={`file-label ${uploading ? 'disabled' : ''}`}>
-                        {fileToUpload ? fileToUpload.name : 'Choose File'}
-                    </label>
+                <div className="upload-form">
+                    <div className="upload-controls">
+                        <input 
+                            type="file" 
+                            onChange={handleFileChange}
+                            className="file-input"
+                            id="document-upload"
+                            disabled={uploading}
+                        />
+                        <label htmlFor="document-upload" className={`file-label ${uploading ? 'disabled' : ''}`}>
+                            {fileToUpload ? fileToUpload.name : 'Choose File'}
+                        </label>
+                    </div>
+                    
+                    <div className="upload-metadata">
+                        <div className="form-group">
+                            <label htmlFor="documentCategory">Category:</label>
+                            <select
+                                id="documentCategory"
+                                value={documentCategory}
+                                onChange={(e) => setDocumentCategory(e.target.value)}
+                                disabled={uploading}
+                            >
+                                {documentCategories.map(category => (
+                                    <option key={category} value={category}>{category}</option>
+                                ))}
+                            </select>
+                        </div>
+                        
+                        <div className="form-group">
+                            <label htmlFor="documentFiscalYear">Fiscal Year:</label>
+                            <select
+                                id="documentFiscalYear"
+                                value={documentFiscalYear}
+                                onChange={(e) => setDocumentFiscalYear(e.target.value)}
+                                disabled={uploading}
+                            >
+                                <option value="">Select Year</option>
+                                {fiscalYears.map(year => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div className="form-group">
+                        <label htmlFor="documentNotes">Notes:</label>
+                        <textarea
+                            id="documentNotes"
+                            value={documentNotes}
+                            onChange={(e) => setDocumentNotes(e.target.value)}
+                            placeholder="Add notes about this document"
+                            disabled={uploading}
+                        />
+                    </div>
                     
                     <button 
                         className="upload-button"
@@ -174,9 +265,11 @@ const DocumentManager = ({ clientId }) => {
                         {uploading ? 'Uploading...' : 'Upload'}
                     </button>
                 </div>
+                
                 <p className="upload-note">
                     Accepted formats: PDF, Word, Excel, and images (up to 10MB)
                 </p>
+                
                 {uploading && (
                     <div className="upload-progress">
                         <div className="progress-indicator"></div>
@@ -190,28 +283,78 @@ const DocumentManager = ({ clientId }) => {
                 
                 {error && <div className="error-message">{error}</div>}
                 
+                {/* Document filters */}
+                <div className="document-filters">
+                    <div className="filter-group">
+                        <label htmlFor="filterCategory">Filter by Category:</label>
+                        <select
+                            id="filterCategory"
+                            value={filterCategory}
+                            onChange={(e) => setFilterCategory(e.target.value)}
+                        >
+                            <option value="">All Categories</option>
+                            {documentCategories.map(category => (
+                                <option key={category} value={category}>{category}</option>
+                            ))}
+                        </select>
+                    </div>
+                    
+                    <div className="filter-group">
+                        <label htmlFor="filterFiscalYear">Filter by Fiscal Year:</label>
+                        <select
+                            id="filterFiscalYear"
+                            value={filterFiscalYear}
+                            onChange={(e) => setFilterFiscalYear(e.target.value)}
+                        >
+                            <option value="">All Years</option>
+                            {fiscalYears.map(year => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
+                        </select>
+                    </div>
+                    
+                    <button 
+                        className="clear-filters-button"
+                        onClick={() => {
+                            setFilterCategory('');
+                            setFilterFiscalYear('');
+                        }}
+                        disabled={!filterCategory && !filterFiscalYear}
+                    >
+                        Clear Filters
+                    </button>
+                </div>
+                
                 {loading ? (
                     <div className="loading-indicator">Loading documents...</div>
                 ) : documents.length === 0 ? (
-                    <p className="no-documents">No documents uploaded yet</p>
+                    <p className="no-documents">No documents found matching the current filters</p>
                 ) : (
                     <div className="documents-table-container">
                         <table className="documents-table">
                             <thead>
                                 <tr>
                                     <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Fiscal Year</th>
                                     <th>Type</th>
                                     <th>Size</th>
                                     <th>Uploaded</th>
                                     <th>Actions</th>
                                 </tr>
-                            </thead>                                <tbody>
+                            </thead>
+                            <tbody>
                                 {documents.map(doc => (
                                     <tr key={doc._id}>
                                         <td className="document-name">
                                             <span className="file-icon">{getFileIcon(doc.type)}</span>
-                                            {doc.name}
+                                            <div>
+                                                <div>{doc.name}</div>
+                                                {doc.notes && <div className="document-notes">{doc.notes}</div>}
+                                            </div>
                                         </td>
+                                        <td>{doc.category || 'Other'}</td>
+                                        <td>{doc.fiscalYear || '-'}</td>
                                         <td>{doc.type.split('/')[1].toUpperCase()}</td>
                                         <td>{formatFileSize(doc.size)}</td>
                                         <td>{formatDate(doc.uploadedAt)}</td>                                            
@@ -230,7 +373,7 @@ const DocumentManager = ({ clientId }) => {
                                                 className="action-button view-online-button"
                                                 title="View this file in a new tab"
                                             >
-                                                View Online
+                                                View
                                             </a>
                                             {user && user.role === 'admin' && (
                                                 <button 

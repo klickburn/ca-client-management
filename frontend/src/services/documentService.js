@@ -6,12 +6,18 @@ const documentService = {
      * 
      * @param {string} clientId - The ID of the client
      * @param {File} file - The file to upload
+     * @param {string} category - Document category
+     * @param {string} fiscalYear - Fiscal year related to the document
+     * @param {string} notes - Additional notes about the document
      * @returns {Promise} - Promise with uploaded document data
      */
-    uploadDocument: async (clientId, file) => {
+    uploadDocument: async (clientId, file, category = 'Other', fiscalYear = '', notes = '') => {
         try {
             const formData = new FormData();
             formData.append('document', file);
+            formData.append('category', category);
+            formData.append('fiscalYear', fiscalYear);
+            formData.append('notes', notes);
             
             // Get auth token
             const user = JSON.parse(localStorage.getItem('user'));
@@ -30,18 +36,37 @@ const documentService = {
     },
 
     /**
-     * Get all documents for a client
+     * Get all documents for a client with optional filtering
      * 
      * @param {string} clientId - The ID of the client
+     * @param {string} category - Optional category filter
+     * @param {string} fiscalYear - Optional fiscal year filter
      * @returns {Promise} - Promise with array of documents
      */
-    getDocuments: async (clientId) => {
+    getDocuments: async (clientId, category = '', fiscalYear = '') => {
         try {
             if (!clientId) {
                 console.error('getDocuments: No client ID provided');
                 return [];
             }
-            const response = await api.get(`/clients/${clientId}/documents`);
+            
+            // Build query params for filtering
+            let url = `/clients/${clientId}/documents`;
+            const params = [];
+            
+            if (category) {
+                params.push(`category=${encodeURIComponent(category)}`);
+            }
+            
+            if (fiscalYear) {
+                params.push(`fiscalYear=${encodeURIComponent(fiscalYear)}`);
+            }
+            
+            if (params.length > 0) {
+                url += `?${params.join('&')}`;
+            }
+            
+            const response = await api.get(url);
             return response.data;
         } catch (error) {
             console.error('Error getting documents:', error.response || error);

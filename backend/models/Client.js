@@ -1,5 +1,33 @@
 const mongoose = require('mongoose');
 
+const addressSchema = new mongoose.Schema({
+    addressType: {
+        type: String,
+        enum: ['Home', 'Office', 'Other'],
+        default: 'Home'
+    },
+    streetAddress: {
+        type: String,
+        required: true
+    },
+    city: {
+        type: String,
+        required: true
+    },
+    state: {
+        type: String,
+        required: true
+    },
+    postalCode: {
+        type: String,
+        required: true
+    },
+    isPrimary: {
+        type: Boolean,
+        default: false
+    }
+});
+
 const clientSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -17,6 +45,10 @@ const clientSchema = new mongoose.Schema({
     address: {
         type: String,
         required: true,
+    },
+    addresses: {
+        type: [addressSchema],
+        default: []
     },
     dateOfBirth: {
         type: Date,
@@ -121,6 +153,17 @@ const clientSchema = new mongoose.Schema({
         },
         size: {
             type: Number
+        },
+        category: {
+            type: String,
+            enum: ['Statement', 'Ledgers', 'Financials', 'Returns', 'Vendor Registration', 'Property Details', 'Other'],
+            default: 'Other'
+        },
+        fiscalYear: {
+            type: String
+        },
+        notes: {
+            type: String
         },
         uploadedAt: {
             type: Date,

@@ -82,11 +82,17 @@
 .checkbox-group {
     display: flex;
     align-items: center;
+    gap: 0.5rem;
 }
 
 .checkbox-group input[type="checkbox"] {
     width: auto;
     margin-right: 0.5rem;
+}
+
+.checkbox-group label {
+    display: inline;
+    margin-bottom: 0;
 }
 
 .form-actions {
@@ -207,12 +213,14 @@ textarea {
 
 .accounts-table-container {
     overflow-x: auto;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .accounts-table {
     width: 100%;
     border-collapse: collapse;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
 }
 
 .accounts-table th, 
@@ -223,35 +231,40 @@ textarea {
 }
 
 .accounts-table th {
-    background-color: #f5f5f5;
+    background-color: #f2f2f2;
     font-weight: 600;
 }
 
+.accounts-table tr:hover {
+    background-color: #f5f5f5;
+}
+
 .add-account-form {
-    background-color: #f8f9fa;
+    background-color: #f9f9f9;
     padding: 1rem;
-    border-radius: 4px;
-    margin-bottom: 2rem;
+    border-radius: 6px;
+    margin-top: 1rem;
 }
 
 .add-account-form h4 {
-    margin-top: 0;
     margin-bottom: 1rem;
+    color: #444;
     font-size: 1rem;
 }
 
 .add-button {
-    background-color: #28a745;
+    background-color: #4CAF50;
     color: white;
     border: none;
-    border-radius: 4px;
     padding: 0.5rem 1rem;
+    border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    margin-top: 1rem;
+    font-weight: 500;
 }
 
 .add-button:hover {
-    background-color: #218838;
+    background-color: #45a049;
 }
 
 .remove-button {
@@ -267,4 +280,18 @@ textarea {
 
 .remove-button:hover {
     background-color: #c82333;
+}
+
+.delete-button {
+    background-color: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.delete-button:hover {
+    background-color: #ff4757;
 }
