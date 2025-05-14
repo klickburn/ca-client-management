@@ -20,8 +20,7 @@ const AdminDashboard = () => {
         userId: null,
         username: '',
         hashedPassword: '',
-        isVisible: false,
-        showPassword: false
+        isVisible: false
     });
     const passwordModalRef = useRef(null);
 
@@ -120,17 +119,12 @@ const AdminDashboard = () => {
                 userId,
                 username: response.username || username,
                 hashedPassword: response.hashedPassword || 'Password not available',
-                isVisible: true,
-                showPassword: false
+                isVisible: true
             });
         } catch (error) {
             console.error('Error fetching user password:', error);
             setErrorMessage('Failed to fetch user password. Please try again.');
         }
-    };
-
-    const togglePasswordVisibility = () => {
-        setPasswordView(prev => ({...prev, showPassword: !prev.showPassword}));
     };
 
     return (
@@ -257,24 +251,12 @@ const AdminDashboard = () => {
                             </button>
                         </div>
                         <div className="password-modal-content">
-                            <div className="password-section">
-                                <div className="password-section-header">
-                                    <p>Hashed Password:</p>
-                                    <button 
-                                        className="toggle-password-visibility" 
-                                        onClick={togglePasswordVisibility}
-                                    >
-                                        {passwordView.showPassword ? 'Hide' : 'Show'} Password
-                                    </button>
-                                </div>
-                                <div className="password-display">
-                                    {passwordView.showPassword 
-                                        ? passwordView.hashedPassword 
-                                        : '••••••••••••••••••••••••••••••••••••••••'}
-                                </div>
+                            <p>Hashed Password:</p>
+                            <div className="password-display">
+                                {passwordView.hashedPassword}
                             </div>
                             <p className="password-note">
-                                <i className="fas fa-info-circle"></i> This is a hashed password. For security reasons, the actual password cannot be retrieved.
+                                Note: This is a hashed password. For security reasons, the actual password cannot be retrieved.
                             </p>
                         </div>
                     </div>

@@ -72,14 +72,31 @@ const documentService = {
     downloadDocument: async (clientId, documentId, documentName) => {
         try {
             const response = await api.get(`/clients/${clientId}/documents/${documentId}`, {
-                responseType: 'blob'
+                responseType: 'blob',
+                timeout: 30000 // Increase timeout for large files
             });
             
-            // Create blob link to download
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            // Get content type from response
+            const contentType = response.headers['content-type'] || 'application/octet-stream';
+            
+            // Create blob link to download with the correct type
+            const blob = new Blob([response.data], { type: contentType });
+            const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', documentName || 'document');
+            
+            // Use the filename from Content-Disposition header if available, otherwise fallback to provided name
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = documentName || 'document';
+            
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+?)"/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = decodeURIComponent(filenameMatch[1]);
+                }
+            }
+            
+            link.setAttribute('download', filename);
             
             // Append to html link element
             document.body.appendChild(link);
@@ -88,10 +105,22 @@ const documentService = {
             link.click();
             
             // Clean up and remove the link
-            document.body.removeChild(link);
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Error downloading document:', error);
-            throw error;
+            // Check for specific error types
+            if (error.response) {
+                if (error.response.status === 404) {
+                    throw new Error('Document not found on server');
+                } else {
+                    throw new Error(`Server error: ${error.response.status}`);
+                }
+            } else if (error.request) {
+                throw new Error('No response from server. Check your network connection.');
+            } else {
+                throw error;
+            }
         }
     },
 

@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import Login from './components/Auth/Login';
 import AdminDashboard from './components/Dashboard/AdminDashboard';
 import UserDashboard from './components/Dashboard/UserDashboard';
+import ClientPage from './components/Dashboard/ClientPage';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
@@ -22,7 +23,7 @@ function App() {
               <Redirect to="/login" />
             </Route>
             
-            <Route path="/(admin|user)">
+            <Route path="/(admin|user|clients)">
               <div className="authenticated-container">
                 <Header />
                 <div className="content-container">
@@ -37,6 +38,10 @@ function App() {
                       <ProtectedRoute 
                         path="/user" 
                         component={UserDashboard} 
+                      />
+                      <ProtectedRoute 
+                        path="/clients" 
+                        component={ClientPage} 
                       />
                     </Switch>
                   </main>
