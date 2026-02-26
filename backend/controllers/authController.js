@@ -6,9 +6,8 @@ const { JWT_SECRET, TOKEN_EXPIRATION } = require('../config/auth');
 // Login function
 exports.login = async (req, res) => {
     const { username, password } = req.body;
-    
-    // Log login attempt (sanitized)
-    console.log(`Login attempt: Username: ${username}, User-Agent: ${req.headers['user-agent']}`);
+
+    console.log(`Login attempt: Username: ${username}`);
 
     try {
         const user = await User.findOne({ username });
@@ -23,17 +22,34 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
+        // Build JWT payload with role-specific data
+        const tokenPayload = {
+            id: user._id,
+            role: user.role,
+        };
+
+        // Include role-specific fields in token
+        if (user.role === 'article') {
+            tokenPayload.assignedClients = user.assignedClients;
+        }
+        if (user.role === 'client') {
+            tokenPayload.clientId = user.clientId;
+        }
+
+        const token = jwt.sign(tokenPayload, JWT_SECRET, {
             expiresIn: TOKEN_EXPIRATION,
         });
 
-        console.log(`Login successful: User ${username} (${user._id}) logged in`);
-        
-        res.json({ 
+        console.log(`Login successful: User ${username} (${user._id}) role=${user.role}`);
+
+        res.json({
             token,
             userId: user._id,
             username: user.username,
-            role: user.role
+            role: user.role,
+            // Role-specific data for frontend
+            ...(user.role === 'article' && { assignedClients: user.assignedClients }),
+            ...(user.role === 'client' && { clientId: user.clientId }),
         });
     } catch (error) {
         console.error(`Login error: ${error.message}`);
@@ -41,26 +57,21 @@ exports.login = async (req, res) => {
     }
 };
 
-// Middleware to protect routes
+// Middleware to protect routes (legacy — prefer middleware/auth.js)
 exports.protect = (req, res, next) => {
     const authHeader = req.headers.authorization;
-    console.log(`Auth attempt: Path: ${req.path}, Auth header present: ${!!authHeader}`);
-    
-    const token = authHeader && authHeader.startsWith('Bearer') 
-        ? authHeader.split(' ')[1] 
+    const token = authHeader && authHeader.startsWith('Bearer')
+        ? authHeader.split(' ')[1]
         : null;
 
     if (!token) {
-        console.log(`Auth failed: No token provided for ${req.path}`);
         return res.status(401).json({ message: 'Not authorized' });
     }
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) {
-            console.log(`Auth failed: Invalid token for ${req.path} - ${err.message}`);
             return res.status(401).json({ message: 'Not authorized' });
         }
-        console.log(`Auth successful: User ${decoded.id} accessed ${req.path}`);
         req.user = decoded;
         next();
     });

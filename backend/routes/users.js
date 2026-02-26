@@ -2,21 +2,21 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/auth');
-const roleCheck = require('../middleware/roleCheck');
+const { checkPermission, checkCreationHierarchy } = require('../middleware/permissions');
 
-// Route to create a new user (admin only)
-router.post('/create', authMiddleware, roleCheck(['admin']), userController.createUser);
+// Create a new user (partner, seniorCA — with hierarchy enforcement)
+router.post('/create', authMiddleware, checkPermission('user:create'), checkCreationHierarchy, userController.createUser);
 
-// Route to list all users (admin only)
-router.get('/', authMiddleware, roleCheck(['admin']), userController.getAllUsers);
+// List all users (partner for team management)
+router.get('/', authMiddleware, checkPermission('team:manage'), userController.getAllUsers);
 
-// Route to assign role to user (admin only)
-router.put('/role', authMiddleware, roleCheck(['admin']), userController.assignRole);
+// Assign role to user (partner only)
+router.put('/role', authMiddleware, checkPermission('team:manage'), userController.assignRole);
 
-// Route to delete a user (admin only)
-router.delete('/:id', authMiddleware, roleCheck(['admin']), userController.deleteUser);
+// Delete a user (partner only)
+router.delete('/:id', authMiddleware, checkPermission('user:delete'), userController.deleteUser);
 
-// Route to get user password (admin only)
-router.get('/password/:id', authMiddleware, roleCheck(['admin']), userController.getUserPassword);
+// Get user password hash (partner only)
+router.get('/password/:id', authMiddleware, checkPermission('team:manage'), userController.getUserPassword);
 
 module.exports = router;

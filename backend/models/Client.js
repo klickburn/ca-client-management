@@ -130,6 +130,11 @@ const clientSchema = new mongoose.Schema({
     notes: {
         type: String
     },
+    // Article assistants assigned to this client
+    assignedTo: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
     createdAt: {
         type: Date,
         default: Date.now,
@@ -148,6 +153,9 @@ const clientSchema = new mongoose.Schema({
             type: String,
             required: true
         },
+        r2Key: {
+            type: String
+        },
         type: {
             type: String
         },
@@ -163,6 +171,21 @@ const clientSchema = new mongoose.Schema({
             type: String
         },
         notes: {
+            type: String
+        },
+        verificationStatus: {
+            type: String,
+            enum: ['pending', 'verified', 'rejected'],
+            default: 'pending'
+        },
+        verifiedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        verifiedAt: {
+            type: Date
+        },
+        rejectionReason: {
             type: String
         },
         uploadedAt: {

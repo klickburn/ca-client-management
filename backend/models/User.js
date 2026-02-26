@@ -12,8 +12,28 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'user'],
-        default: 'user'
+        enum: ['partner', 'seniorCA', 'article', 'client'],
+        required: true
+    },
+    // For article users: which clients they are assigned to
+    assignedClients: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Client'
+    }],
+    // For article users: their supervising Sr. CA or Partner
+    supervisorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    // For client-role users: link to their Client document
+    clientId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Client'
+    },
+    // Who created this user (for hierarchy tracking)
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }
 }, { timestamps: true });
 

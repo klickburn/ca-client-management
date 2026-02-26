@@ -1,37 +1,53 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const { CREATION_HIERARCHY } = require('../middleware/permissions');
 
-// Create a new user
+// Create a new user (with hierarchy enforcement from middleware)
 exports.createUser = async (req, res) => {
-    const { username, password, role } = req.body;
+    const { username, password, role, assignedClients, supervisorId, clientId } = req.body;
 
     try {
-        // Check if user already exists
         const existingUser = await User.findOne({ username });
         if (existingUser) {
             return res.status(400).json({ message: 'Username already exists' });
         }
 
-        // Hash the password
+        if (!role) {
+            return res.status(400).json({ message: 'Role is required' });
+        }
+
+        // Validate role-specific requirements
+        if (role === 'article' && !supervisorId) {
+            return res.status(400).json({ message: 'Article assistants require a supervisorId' });
+        }
+        if (role === 'client' && !clientId) {
+            return res.status(400).json({ message: 'Client users require a linked clientId' });
+        }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create new user with hashed password
-        const newUser = new User({ 
-            username, 
-            password: hashedPassword, 
-            role: role || 'user' 
+        const newUser = new User({
+            username,
+            password: hashedPassword,
+            role,
+            assignedClients: role === 'article' ? (assignedClients || []) : undefined,
+            supervisorId: role === 'article' ? supervisorId : undefined,
+            clientId: role === 'client' ? clientId : undefined,
+            createdBy: req.user.id,
         });
-        
+
         await newUser.save();
-        
-        // Don't return the password in the response
+
         const userResponse = {
             _id: newUser._id,
             username: newUser.username,
-            role: newUser.role
+            role: newUser.role,
+            assignedClients: newUser.assignedClients,
+            supervisorId: newUser.supervisorId,
+            clientId: newUser.clientId,
         };
-        
+
         res.status(201).json({ message: 'User created successfully', user: userResponse });
     } catch (error) {
         res.status(500).json({ message: 'Error creating user', error: error.message });
@@ -41,10 +57,13 @@ exports.createUser = async (req, res) => {
 // Get all users
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.find()
+            .select('-password')
+            .populate('supervisorId', 'username role')
+            .populate('clientId', 'name email');
         res.status(200).json(users);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching users', error });
+        res.status(500).json({ message: 'Error fetching users', error: error.message });
     }
 };
 
@@ -53,13 +72,19 @@ exports.assignRole = async (req, res) => {
     const { userId, role } = req.body;
 
     try {
-        const user = await User.findByIdAndUpdate(userId, { role }, { new: true });
+        // Enforce hierarchy: current user must be allowed to assign this role
+        const allowedToCreate = CREATION_HIERARCHY[req.user.role] || [];
+        if (!allowedToCreate.includes(role)) {
+            return res.status(403).json({ message: `Cannot assign role: ${role}` });
+        }
+
+        const user = await User.findByIdAndUpdate(userId, { role }, { new: true }).select('-password');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
         res.status(200).json({ message: 'Role assigned successfully', user });
     } catch (error) {
-        res.status(500).json({ message: 'Error assigning role', error });
+        res.status(500).json({ message: 'Error assigning role', error: error.message });
     }
 };
 
@@ -76,7 +101,7 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
-// Get user password (admin only)
+// Get user password hash (partner only)
 exports.getUserPassword = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -84,12 +109,9 @@ exports.getUserPassword = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Since passwords are stored hashed, we can't retrieve the original
-        // Instead, we'll return the hashed password (for admin viewing only)
-        // In a real-world application, consider the security implications of this
-        res.status(200).json({ 
-            username: user.username, 
-            hashedPassword: user.password 
+        res.status(200).json({
+            username: user.username,
+            hashedPassword: user.password
         });
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving password', error: error.message });

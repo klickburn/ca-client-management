@@ -25,9 +25,6 @@ app.use(bodyParser.json());
 // Connect to MongoDB
 connectDB();
 
-// Make uploads directory accessible
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -37,11 +34,11 @@ app.use('/api/clients', documentRoutes); // Document routes nested under clients
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
     // Set static folder
-    app.use(express.static(path.join(__dirname, '../frontend/build')));
+    app.use(express.static(path.join(__dirname, '../frontend-v2/build')));
 
     // Any route that is not an API route will be served the React app
     app.get('*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
+        res.sendFile(path.resolve(__dirname, '../frontend-v2/build', 'index.html'));
     });
 }
 

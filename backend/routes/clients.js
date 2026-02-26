@@ -2,21 +2,21 @@ const express = require('express');
 const router = express.Router();
 const clientController = require('../controllers/clientController');
 const authMiddleware = require('../middleware/auth');
-const roleCheck = require('../middleware/roleCheck');
+const { checkPermission, filterClientAccess } = require('../middleware/permissions');
 
-// Route to create a new client (both admin and regular users)
-router.post('/', authMiddleware, clientController.createClient);
+// Create a new client (partner, seniorCA only)
+router.post('/', authMiddleware, checkPermission('client:create'), clientController.createClient);
 
-// Route to get all clients
-router.get('/', authMiddleware, clientController.getClients);
+// Get all clients (filtered by role)
+router.get('/', authMiddleware, filterClientAccess, clientController.getClients);
 
-// Route to get a specific client by ID
-router.get('/:id', authMiddleware, clientController.getClientById);
+// Get a specific client by ID (access checked in controller)
+router.get('/:id', authMiddleware, filterClientAccess, clientController.getClientById);
 
-// Route to update a client by ID
-router.put('/:id', authMiddleware, clientController.updateClient);
+// Update a client (partner, seniorCA only)
+router.put('/:id', authMiddleware, checkPermission('client:edit'), clientController.updateClient);
 
-// Route to delete a client by ID (admin only)
-router.delete('/:id', authMiddleware, roleCheck(['admin']), clientController.deleteClient);
+// Delete a client (partner only)
+router.delete('/:id', authMiddleware, checkPermission('client:delete'), clientController.deleteClient);
 
 module.exports = router;

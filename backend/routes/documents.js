@@ -1,53 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
 const documentController = require('../controllers/documentController');
 const authMiddleware = require('../middleware/auth');
-const roleCheck = require('../middleware/roleCheck');
+const { checkPermission } = require('../middleware/permissions');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-        cb(null, path.join(__dirname, '../uploads'));
-    },
-    filename: function(req, file, cb) {
-        // Create unique filename with original extension
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, `${uniqueSuffix}${ext}`);
-    }
-});
+// Get presigned upload URL (all authenticated users can upload)
+router.post('/:clientId/documents/upload-url', authMiddleware, checkPermission('document:upload'), documentController.getUploadUrl);
 
-const upload = multer({ 
-    storage: storage,
-    limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB max file size
-    },
-    fileFilter: function(req, file, cb) {
-        // Accept common document types
-        const allowedFileTypes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'image/jpeg',
-            'image/png'
-        ];
-        
-        if (allowedFileTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type. Only PDF, Word, Excel, and image files are allowed.'));
-        }
-    }
-});
+// Confirm upload completed
+router.post('/:clientId/documents/:documentId/confirm', authMiddleware, documentController.confirmUpload);
 
-// Routes for document operations
-router.post('/:clientId/documents', authMiddleware, upload.single('document'), documentController.uploadDocument);
+// List documents for a client
 router.get('/:clientId/documents', authMiddleware, documentController.getDocuments);
-router.get('/:clientId/documents/:documentId', authMiddleware, documentController.getDocument);
-router.delete('/:clientId/documents/:documentId', authMiddleware, roleCheck(['admin']), documentController.deleteDocument);
+
+// Get presigned download URL
+router.get('/:clientId/documents/:documentId/download-url', authMiddleware, documentController.getDownloadUrl);
+
+// Verify a document (partner, seniorCA only)
+router.put('/:clientId/documents/:documentId/verify', authMiddleware, checkPermission('document:verify'), documentController.verifyDocument);
+
+// Reject a document (partner, seniorCA only)
+router.put('/:clientId/documents/:documentId/reject', authMiddleware, checkPermission('document:verify'), documentController.rejectDocument);
+
+// Delete a document (partner only)
+router.delete('/:clientId/documents/:documentId', authMiddleware, checkPermission('document:delete'), documentController.deleteDocument);
 
 module.exports = router;
