@@ -6,7 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard,
   Users,
-  FileText,
+  ListTodo,
+  IndianRupee,
+  Activity,
+  BarChart3,
   Settings,
   UserCircle,
 } from 'lucide-react';
@@ -23,19 +26,21 @@ export default function Sidebar() {
   const canViewDashboard = usePermission('dashboard:full') || usePermission('dashboard:limited');
   const canManageTeam = usePermission('team:manage');
   const canManageSettings = usePermission('settings:firm');
+  const canViewActivity = usePermission('activity:view');
+  const canViewBillingAll = usePermission('billing:viewAll');
+  const canViewBillingOwn = usePermission('billing:viewOwn');
+  const canViewReports = usePermission('dashboard:full');
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-60 bg-sidebar flex flex-col z-20">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5">
-        <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center shrink-0">
-          <span className="text-primary-foreground font-bold text-sm">CA</span>
-        </div>
+        <img src="/ca-logo.png" alt="JLA" className="h-9 w-auto shrink-0" />
         <span className="text-white font-semibold text-lg">ClientDB</span>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 space-y-1">
+      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
         {canViewDashboard && (
           <NavLink to="/dashboard" className={navItemClass}>
             <LayoutDashboard size={18} />
@@ -47,6 +52,32 @@ export default function Sidebar() {
           <Users size={18} />
           Clients
         </NavLink>
+
+        <NavLink to="/tasks" className={navItemClass}>
+          <ListTodo size={18} />
+          Tasks
+        </NavLink>
+
+        {(canViewBillingAll || canViewBillingOwn) && (
+          <NavLink to="/billing" className={navItemClass}>
+            <IndianRupee size={18} />
+            Billing
+          </NavLink>
+        )}
+
+        {canViewActivity && (
+          <NavLink to="/activity" className={navItemClass}>
+            <Activity size={18} />
+            Activity
+          </NavLink>
+        )}
+
+        {canViewReports && (
+          <NavLink to="/reports" className={navItemClass}>
+            <BarChart3 size={18} />
+            Reports
+          </NavLink>
+        )}
 
         {canManageTeam && (
           <NavLink to="/team" className={navItemClass}>

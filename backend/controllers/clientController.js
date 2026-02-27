@@ -1,4 +1,11 @@
 const Client = require('../models/Client');
+const ActivityLog = require('../models/ActivityLog');
+
+const logActivity = async (action, userId, targetId, details) => {
+    try {
+        await ActivityLog.create({ action, performedBy: userId, targetType: 'Client', targetId, details });
+    } catch (err) { console.error('Activity log error:', err.message); }
+};
 
 // Create a new client
 exports.createClient = async (req, res) => {
@@ -9,6 +16,7 @@ exports.createClient = async (req, res) => {
         };
         const client = new Client(clientData);
         await client.save();
+        await logActivity('client:create', req.user.id, client._id, `Created client: ${client.name}`);
         res.status(201).json(client);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -55,6 +63,7 @@ exports.updateClient = async (req, res) => {
         if (!client) {
             return res.status(404).json({ message: 'Client not found' });
         }
+        await logActivity('client:update', req.user.id, client._id, `Updated client: ${client.name}`);
         res.status(200).json(client);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -68,6 +77,7 @@ exports.deleteClient = async (req, res) => {
         if (!client) {
             return res.status(404).json({ message: 'Client not found' });
         }
+        await logActivity('client:delete', req.user.id, client._id, `Deleted client: ${client.name}`);
         res.status(204).send();
     } catch (error) {
         res.status(500).json({ message: error.message });

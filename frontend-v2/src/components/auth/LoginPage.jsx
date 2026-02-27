@@ -34,11 +34,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-md border-0 bg-card">
         <CardHeader className="space-y-1 text-center pb-2">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">CA</span>
-            </div>
+            <img src="/ca-logo.png" alt="Jain Lukkad & Associates" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardTitle className="text-2xl font-bold">Jain Lukkad & Associates</CardTitle>
           <p className="text-muted-foreground text-sm">
             Sign in to your account
           </p>

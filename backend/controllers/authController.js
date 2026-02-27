@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { JWT_SECRET, TOKEN_EXPIRATION } = require('../config/auth');
+const ActivityLog = require('../models/ActivityLog');
 
 // Login function
 exports.login = async (req, res) => {
@@ -41,6 +42,7 @@ exports.login = async (req, res) => {
         });
 
         console.log(`Login successful: User ${username} (${user._id}) role=${user.role}`);
+        try { await ActivityLog.create({ action: 'login', performedBy: user._id, details: `${username} logged in` }); } catch (e) {}
 
         res.json({
             token,

@@ -1,5 +1,13 @@
 const Client = require('../models/Client');
+const ActivityLog = require('../models/ActivityLog');
+const Notification = require('../models/Notification');
 const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+
+const logActivity = async (action, userId, targetId, details) => {
+    try {
+        await ActivityLog.create({ action, performedBy: userId, targetType: 'Document', targetId, details });
+    } catch (err) { console.error('Activity log error:', err.message); }
+};
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { r2Client, R2_BUCKET } = require('../config/r2');
 
@@ -85,6 +93,7 @@ exports.confirmUpload = async (req, res) => {
 
         await client.save();
 
+        await logActivity('document:upload', req.user.id, clientId, `Uploaded document: ${document.name}`);
         res.status(200).json({ message: 'Upload confirmed', document });
     } catch (error) {
         console.error('Error confirming upload:', error);
@@ -175,6 +184,7 @@ exports.verifyDocument = async (req, res) => {
 
         await client.save();
 
+        await logActivity('document:verify', req.user.id, clientId, `Verified document: ${document.name}`);
         res.status(200).json({ message: 'Document verified', document });
     } catch (error) {
         console.error('Error verifying document:', error);
@@ -205,6 +215,7 @@ exports.rejectDocument = async (req, res) => {
 
         await client.save();
 
+        await logActivity('document:reject', req.user.id, clientId, `Rejected document: ${document.name}`);
         res.status(200).json({ message: 'Document rejected', document });
     } catch (error) {
         console.error('Error rejecting document:', error);
@@ -243,6 +254,7 @@ exports.deleteDocument = async (req, res) => {
         client.documents = client.documents.filter(doc => doc._id.toString() !== documentId);
         await client.save();
 
+        await logActivity('document:delete', req.user.id, clientId, `Deleted document: ${document.name}`);
         res.status(200).json({ message: 'Document deleted successfully' });
     } catch (error) {
         console.error('Error deleting document:', error);

@@ -20,6 +20,13 @@ const PERMISSIONS = {
     'dashboard:limited':   ['article'],
     'user:create':         ['partner', 'seniorCA'],
     'user:delete':         ['partner'],
+    'task:create':         ['partner', 'seniorCA', 'article'],
+    'task:edit':           ['partner', 'seniorCA', 'article'],
+    'task:delete':         ['partner', 'seniorCA'],
+    'billing:create':      ['partner', 'seniorCA'],
+    'billing:edit':        ['partner', 'seniorCA'],
+    'billing:delete':      ['partner'],
+    'activity:view':       ['partner', 'seniorCA'],
 };
 
 // Roles that a given role is allowed to create

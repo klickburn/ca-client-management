@@ -7,6 +7,11 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const clientRoutes = require('./routes/clients');
 const documentRoutes = require('./routes/documents');
+const taskRoutes = require('./routes/tasks');
+const invoiceRoutes = require('./routes/invoices');
+const activityRoutes = require('./routes/activities');
+const notificationRoutes = require('./routes/notifications');
+const reportRoutes = require('./routes/reports');
 const connectDB = require('./config/database');
 
 const app = express();
@@ -30,6 +35,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/clients', documentRoutes); // Document routes nested under clients
+app.use('/api/tasks', taskRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/activities', activityRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

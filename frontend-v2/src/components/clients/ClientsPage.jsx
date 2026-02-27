@@ -6,11 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { Plus, Search, Trash2, Phone, Mail } from 'lucide-react';
+
+const CLIENT_TYPES = ['Individual', 'Partnership', 'LLP', 'Pvt Ltd', 'Public Ltd', 'HUF', 'Other'];
+const SERVICES = ['Income Tax Filing', 'GST Filing', 'Accounting', 'Audit', 'Company Formation', 'Consultancy', 'Other'];
 
 export default function ClientsPage() {
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [filterService, setFilterService] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const canCreate = usePermission('client:create');
@@ -42,16 +51,29 @@ export default function ClientsPage() {
     }
   };
 
-  const filtered = clients.filter((c) => {
-    const q = search.toLowerCase();
-    return (
-      c.name?.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q) ||
-      c.phone?.includes(q) ||
-      c.panNumber?.toLowerCase().includes(q) ||
-      c.gstNumber?.toLowerCase().includes(q)
-    );
-  });
+  const filtered = clients
+    .filter((c) => {
+      const q = search.toLowerCase();
+      const matchesSearch = !q || (
+        c.name?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.phone?.includes(q) ||
+        c.panNumber?.toLowerCase().includes(q) ||
+        c.gstNumber?.toLowerCase().includes(q) ||
+        c.aadharNumber?.includes(q) ||
+        c.address?.toLowerCase().includes(q)
+      );
+      const matchesType = filterType === 'all' || c.clientType === filterType;
+      const matchesService = filterService === 'all' || c.services?.includes(filterService);
+      return matchesSearch && matchesType && matchesService;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+      if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+      if (sortBy === 'type') return (a.clientType || '').localeCompare(b.clientType || '');
+      return 0;
+    });
 
   if (loading) {
     return <div className="text-muted-foreground">Loading clients...</div>;
@@ -61,7 +83,10 @@ export default function ClientsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Clients</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Clients</h1>
+          <p className="text-xs text-muted-foreground mt-1">{filtered.length} of {clients.length} clients</p>
+        </div>
         {canCreate && (
           <Button onClick={() => navigate('/clients/new')}>
             <Plus size={16} className="mr-2" />
@@ -70,21 +95,52 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search by name, email, phone, PAN, GST..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 bg-secondary border-0"
-        />
+      {/* Search & Filters */}
+      <div className="flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-48 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search name, email, phone, PAN, GST, Aadhar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-secondary border-0"
+          />
+        </div>
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-36 bg-secondary border-0 h-9 text-xs">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {CLIENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterService} onValueChange={setFilterService}>
+          <SelectTrigger className="w-44 bg-secondary border-0 h-9 text-xs">
+            <SelectValue placeholder="All Services" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Services</SelectItem>
+            {SERVICES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-32 bg-secondary border-0 h-9 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Sort: Name</SelectItem>
+            <SelectItem value="newest">Sort: Newest</SelectItem>
+            <SelectItem value="oldest">Sort: Oldest</SelectItem>
+            <SelectItem value="type">Sort: Type</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Client Grid */}
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          {search ? 'No clients match your search' : 'No clients found'}
+          {search || filterType !== 'all' || filterService !== 'all' ? 'No clients match your filters' : 'No clients found'}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
