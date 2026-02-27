@@ -17,8 +17,9 @@ import {
 } from '@/components/ui/dialog';
 import {
   Plus, Calendar, Clock, AlertTriangle, CheckCircle2,
-  Circle, ArrowUpCircle, Trash2,
+  Circle, ArrowUpCircle, Trash2, ChevronDown,
 } from 'lucide-react';
+import DocumentChecklist from '@/components/compliance/DocumentChecklist';
 
 const TASK_TYPES = ['ITR Filing', 'GST Filing', 'TDS Return', 'Audit', 'ROC Filing', 'Tax Planning', 'Bookkeeping', 'Other'];
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
@@ -52,6 +53,7 @@ export default function TasksPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [stats, setStats] = useState({});
+  const [expandedTask, setExpandedTask] = useState(null);
   const [form, setForm] = useState({
     title: '', description: '', client: '', taskType: 'Other',
     priority: 'medium', dueDate: '', assignedTo: '', fiscalYear: '', notes: '',
@@ -241,38 +243,49 @@ export default function TasksPage() {
                 const pc = priorityConfig[task.priority] || priorityConfig.medium;
                 const StatusIcon = sc.icon;
 
+                const isExpanded = expandedTask === task._id;
                 return (
-                  <div key={task._id} className="flex items-center gap-3 py-3 px-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
-                    <StatusIcon size={18} className={sc.color.split(' ')[1]} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-white truncate">{task.title}</span>
-                        <Badge className={`text-[10px] px-1.5 py-0 ${pc.color} border-0`}>{pc.label}</Badge>
-                        <Badge className={`text-[10px] px-1.5 py-0 ${sc.color} border-0`}>{sc.label}</Badge>
+                  <div key={task._id} className="rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
+                    <div className="flex items-center gap-3 py-3 px-4">
+                      <button onClick={() => setExpandedTask(isExpanded ? null : task._id)} className="shrink-0">
+                        <ChevronDown size={14} className={`text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      </button>
+                      <StatusIcon size={18} className={sc.color.split(' ')[1]} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-white truncate">{task.title}</span>
+                          <Badge className={`text-[10px] px-1.5 py-0 ${pc.color} border-0`}>{pc.label}</Badge>
+                          <Badge className={`text-[10px] px-1.5 py-0 ${sc.color} border-0`}>{sc.label}</Badge>
+                        </div>
+                        <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                          <span>{task.client?.name}</span>
+                          <span>{task.taskType}</span>
+                          {task.assignedTo && <span>Assigned: {task.assignedTo.username}</span>}
+                          <span className="flex items-center gap-1">
+                            <Calendar size={11} />
+                            {new Date(task.dueDate).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-                        <span>{task.client?.name}</span>
-                        <span>{task.taskType}</span>
-                        {task.assignedTo && <span>Assigned: {task.assignedTo.username}</span>}
-                        <span className="flex items-center gap-1">
-                          <Calendar size={11} />
-                          {new Date(task.dueDate).toLocaleDateString()}
-                        </span>
+                      <div className="flex items-center gap-1">
+                        <Select value={task.status} onValueChange={(v) => handleStatusChange(task._id, v)}>
+                          <SelectTrigger className="h-7 w-28 text-xs bg-secondary border-0"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {STATUSES.map((s) => <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        {canDelete && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100" onClick={() => handleDelete(task._id)}>
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Select value={task.status} onValueChange={(v) => handleStatusChange(task._id, v)}>
-                        <SelectTrigger className="h-7 w-28 text-xs bg-secondary border-0"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {STATUSES.map((s) => <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      {canDelete && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100" onClick={() => handleDelete(task._id)}>
-                          <Trash2 size={14} />
-                        </Button>
-                      )}
-                    </div>
+                    {isExpanded && task.taskType !== 'Other' && (
+                      <div className="px-4 pb-3">
+                        <DocumentChecklist taskType={task.taskType} clientId={task.client?._id} />
+                      </div>
+                    )}
                   </div>
                 );
               })}

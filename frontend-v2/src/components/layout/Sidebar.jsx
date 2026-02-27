@@ -12,6 +12,8 @@ import {
   BarChart3,
   Settings,
   UserCircle,
+  Calendar,
+  KeyRound,
 } from 'lucide-react';
 
 const navItemClass = ({ isActive }) =>
@@ -71,6 +73,16 @@ export default function Sidebar() {
             Activity
           </NavLink>
         )}
+
+        <NavLink to="/compliance" className={navItemClass}>
+          <Calendar size={18} />
+          Compliance
+        </NavLink>
+
+        <NavLink to="/dsc" className={navItemClass}>
+          <KeyRound size={18} />
+          DSC Tracker
+        </NavLink>
 
         {canViewReports && (
           <NavLink to="/reports" className={navItemClass}>

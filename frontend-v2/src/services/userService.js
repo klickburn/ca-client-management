@@ -19,4 +19,9 @@ export const userService = {
   async deleteUser(userId) {
     await api.delete(`/users/${userId}`);
   },
+
+  async changePassword(currentPassword, newPassword) {
+    const response = await api.put('/users/change-password', { currentPassword, newPassword });
+    return response.data;
+  },
 };

@@ -12,6 +12,8 @@ const invoiceRoutes = require('./routes/invoices');
 const activityRoutes = require('./routes/activities');
 const notificationRoutes = require('./routes/notifications');
 const reportRoutes = require('./routes/reports');
+const complianceRoutes = require('./routes/compliance');
+const dscRoutes = require('./routes/dsc');
 const connectDB = require('./config/database');
 
 const app = express();
@@ -40,6 +42,8 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/compliance', complianceRoutes);
+app.use('/api/dsc', dscRoutes);
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

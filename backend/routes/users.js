@@ -13,6 +13,9 @@ router.get('/', authMiddleware, checkPermission('team:manage'), userController.g
 // Assign role to user (partner only)
 router.put('/role', authMiddleware, checkPermission('team:manage'), userController.assignRole);
 
+// Change own password (any authenticated user)
+router.put('/change-password', authMiddleware, userController.changePassword);
+
 // Delete a user (partner only)
 router.delete('/:id', authMiddleware, checkPermission('user:delete'), userController.deleteUser);
 

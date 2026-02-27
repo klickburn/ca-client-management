@@ -13,6 +13,8 @@ import ActivityPage from '@/components/activity/ActivityPage';
 import ReportsPage from '@/components/reports/ReportsPage';
 import TeamPage from '@/components/users/TeamPage';
 import SettingsPage from '@/components/settings/SettingsPage';
+import CompliancePage from '@/components/compliance/CompliancePage';
+import DSCPage from '@/components/dsc/DSCPage';
 
 export default function App() {
   return (
@@ -32,6 +34,8 @@ export default function App() {
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/activity" element={<ActivityPage />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/compliance" element={<CompliancePage />} />
+              <Route path="/dsc" element={<DSCPage />} />
               <Route path="/team" element={<TeamPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
