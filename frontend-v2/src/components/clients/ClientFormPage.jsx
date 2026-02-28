@@ -4,6 +4,9 @@ import { clientService } from '@/services/clientService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import BasicInfoForm from './forms/BasicInfoForm';
 import AddressForm from './forms/AddressForm';
 import IdentityForm from './forms/IdentityForm';
@@ -12,7 +15,7 @@ import BankAccountsForm from './forms/BankAccountsForm';
 import LoanAccountsForm from './forms/LoanAccountsForm';
 import DematAccountsForm from './forms/DematAccountsForm';
 import ServicesNotesForm from './forms/ServicesNotesForm';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Check, UserPlus } from 'lucide-react';
 
 const initialState = {
   name: '', email: '', phone: '', address: '', dateOfBirth: '',
@@ -29,6 +32,8 @@ export default function ClientFormPage() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [credentialsDialog, setCredentialsDialog] = useState(null);
+  const [copied, setCopied] = useState('');
 
   useEffect(() => {
     if (isEdit) {
@@ -39,6 +44,12 @@ export default function ClientFormPage() {
     }
   }, [id, isEdit]);
 
+  const copyToClipboard = (text, field) => {
+    navigator.clipboard.writeText(text);
+    setCopied(field);
+    setTimeout(() => setCopied(''), 2000);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -47,10 +58,15 @@ export default function ClientFormPage() {
     try {
       if (isEdit) {
         await clientService.updateClient(id, formData);
+        navigate('/clients');
       } else {
-        await clientService.createClient(formData);
+        const result = await clientService.createClient(formData);
+        if (result.portalCredentials) {
+          setCredentialsDialog(result.portalCredentials);
+        } else {
+          navigate('/clients');
+        }
       }
-      navigate('/clients');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save client');
     } finally {
@@ -172,6 +188,49 @@ export default function ClientFormPage() {
           </Button>
         </div>
       </form>
+
+      {/* Portal Credentials Dialog */}
+      <Dialog open={!!credentialsDialog} onOpenChange={() => { setCredentialsDialog(null); navigate('/clients'); }}>
+        <DialogContent className="bg-card border-0 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2">
+              <UserPlus size={18} className="text-green-500" />
+              Client Portal Account Created
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground">
+              A portal login has been automatically created for this client. Share these credentials with them so they can access their portal.
+            </p>
+            <div className="bg-muted rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Username</p>
+                  <p className="text-sm font-mono text-white">{credentialsDialog?.username}</p>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(credentialsDialog?.username, 'username')}>
+                  {copied === 'username' ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                </Button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Password</p>
+                  <p className="text-sm font-mono text-white">{credentialsDialog?.password}</p>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(credentialsDialog?.password, 'password')}>
+                  {copied === 'password' ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                </Button>
+              </div>
+            </div>
+            <p className="text-[11px] text-yellow-500">
+              Save these credentials now — the password cannot be retrieved later.
+            </p>
+            <Button className="w-full" onClick={() => { setCredentialsDialog(null); navigate('/clients'); }}>
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

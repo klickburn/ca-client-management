@@ -28,6 +28,8 @@ export default function DocumentManager({ clientId }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [rejectDialog, setRejectDialog] = useState(null); // { docId, reason }
+  const [deleteDialog, setDeleteDialog] = useState(null); // docId
   const fileInputRef = useRef(null);
 
   const canUpload = usePermission('document:upload');
@@ -100,21 +102,22 @@ export default function DocumentManager({ clientId }) {
     }
   };
 
-  const handleReject = async (docId) => {
-    const reason = prompt('Reason for rejection:');
-    if (reason === null) return;
+  const handleReject = async () => {
+    if (!rejectDialog) return;
     try {
-      await documentService.rejectDocument(clientId, docId, reason);
+      await documentService.rejectDocument(clientId, rejectDialog.docId, rejectDialog.reason);
+      setRejectDialog(null);
       fetchDocuments();
     } catch (error) {
       console.error('Reject failed:', error);
     }
   };
 
-  const handleDelete = async (docId) => {
-    if (!confirm('Delete this document?')) return;
+  const handleDelete = async () => {
+    if (!deleteDialog) return;
     try {
-      await documentService.deleteDocument(clientId, docId);
+      await documentService.deleteDocument(clientId, deleteDialog);
+      setDeleteDialog(null);
       fetchDocuments();
     } catch (error) {
       console.error('Delete failed:', error);
@@ -268,7 +271,7 @@ export default function DocumentManager({ clientId }) {
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-green-500" onClick={() => handleVerify(doc._id)}>
                           <CheckCircle size={15} />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => handleReject(doc._id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setRejectDialog({ docId: doc._id, reason: '' })}>
                           <XCircle size={15} />
                         </Button>
                       </>
@@ -277,7 +280,7 @@ export default function DocumentManager({ clientId }) {
                       <Download size={15} />
                     </Button>
                     {canDelete && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(doc._id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog(doc._id)}>
                         <Trash2 size={15} />
                       </Button>
                     )}
@@ -288,6 +291,44 @@ export default function DocumentManager({ clientId }) {
           )}
         </CardContent>
       </Card>
+      {/* Reject Dialog */}
+      {rejectDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setRejectDialog(null)}>
+          <div className="bg-card rounded-lg p-6 w-full max-w-md space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white">Reject Document</h3>
+            <div className="space-y-2">
+              <Label>Reason for rejection</Label>
+              <textarea
+                className="w-full bg-secondary rounded-md p-3 text-sm text-white border-0 focus:ring-1 focus:ring-primary resize-none"
+                rows={3}
+                maxLength={500}
+                value={rejectDialog.reason}
+                onChange={(e) => setRejectDialog({ ...rejectDialog, reason: e.target.value })}
+                placeholder="Enter reason..."
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setRejectDialog(null)}>Cancel</Button>
+              <Button variant="destructive" size="sm" onClick={handleReject} disabled={!rejectDialog.reason.trim()}>Reject</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setDeleteDialog(null)}>
+          <div className="bg-card rounded-lg p-6 w-full max-w-sm space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white">Delete Document</h3>
+            <p className="text-sm text-muted-foreground">Are you sure you want to delete this document? This action cannot be undone.</p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setDeleteDialog(null)}>Cancel</Button>
+              <Button variant="destructive" size="sm" onClick={handleDelete}>Delete</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -18,11 +18,11 @@ export default function BasicInfoForm({ data, onChange }) {
         </div>
         <div className="space-y-2">
           <Label>Email *</Label>
-          <Input type="email" value={data.email || ''} onChange={(e) => update('email', e.target.value)} className="bg-secondary border-0" required />
+          <Input type="email" pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}" value={data.email || ''} onChange={(e) => update('email', e.target.value)} className="bg-secondary border-0" required />
         </div>
         <div className="space-y-2">
           <Label>Phone *</Label>
-          <Input value={data.phone || ''} onChange={(e) => update('phone', e.target.value)} className="bg-secondary border-0" required />
+          <Input type="tel" pattern="[0-9]{10}" maxLength={10} placeholder="10-digit number" value={data.phone || ''} onChange={(e) => update('phone', e.target.value.replace(/\D/g, ''))} className="bg-secondary border-0" required />
         </div>
         <div className="space-y-2">
           <Label>Date of Birth</Label>

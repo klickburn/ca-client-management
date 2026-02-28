@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Plus, Calendar, Clock, AlertTriangle, CheckCircle2,
-  Circle, ArrowUpCircle, Trash2, ChevronDown,
+  Circle, ArrowUpCircle, Trash2, ChevronDown, CheckSquare,
 } from 'lucide-react';
 import DocumentChecklist from '@/components/compliance/DocumentChecklist';
 
@@ -52,8 +52,12 @@ export default function TasksPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
+  const [filterClient, setFilterClient] = useState('all');
   const [stats, setStats] = useState({});
   const [expandedTask, setExpandedTask] = useState(null);
+  const [selectedTasks, setSelectedTasks] = useState(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState('my');
   const [form, setForm] = useState({
     title: '', description: '', client: '', taskType: 'Other',
     priority: 'medium', dueDate: '', assignedTo: '', fiscalYear: '', notes: '',
@@ -61,16 +65,21 @@ export default function TasksPage() {
 
   useEffect(() => {
     fetchData();
-  }, [filterStatus, filterPriority]);
+  }, [filterStatus, filterPriority, filterClient]);
 
   const fetchData = async () => {
     try {
       const [tasksData, statsData, clientsData] = await Promise.all([
-        taskService.getTasks({ status: filterStatus !== 'all' ? filterStatus : undefined, priority: filterPriority !== 'all' ? filterPriority : undefined }),
+        taskService.getTasks({
+          status: filterStatus !== 'all' ? filterStatus : undefined,
+          priority: filterPriority !== 'all' ? filterPriority : undefined,
+          clientId: filterClient !== 'all' ? filterClient : undefined,
+        }),
         taskService.getTaskStats(),
         clientService.getClients(),
       ]);
       setTasks(tasksData);
+      setSelectedTasks(new Set());
       setStats(statsData);
       setClients(clientsData);
 
@@ -106,6 +115,15 @@ export default function TasksPage() {
     }
   };
 
+  const handleAssign = async (taskId, assignedTo) => {
+    try {
+      await taskService.updateTask(taskId, { assignedTo: assignedTo || null });
+      fetchData();
+    } catch (error) {
+      console.error('Error assigning task:', error);
+    }
+  };
+
   const handleDelete = async (taskId) => {
     if (!confirm('Delete this task?')) return;
     try {
@@ -116,7 +134,49 @@ export default function TasksPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedTasks.size === 0) return;
+    if (!confirm(`Delete ${selectedTasks.size} selected task(s)?`)) return;
+    setBulkDeleting(true);
+    try {
+      await taskService.bulkDeleteTasks([...selectedTasks]);
+      setSelectedTasks(new Set());
+      fetchData();
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const toggleSelect = (taskId) => {
+    setSelectedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedTasks.size === displayedTasks.length) {
+      setSelectedTasks(new Set());
+    } else {
+      setSelectedTasks(new Set(displayedTasks.map((t) => t._id)));
+    }
+  };
+
   const isOverdue = (task) => task.status !== 'completed' && new Date(task.dueDate) < new Date();
+
+  const isStaff = user?.role === 'partner' || user?.role === 'seniorCA';
+
+  // Filter tasks by active tab
+  const displayedTasks = tasks.filter((task) => {
+    if (!isStaff) return true; // non-staff see all their tasks (already scoped by backend)
+    if (activeTab === 'my') return task.assignedTo?._id === user?.userId;
+    if (activeTab === 'unassigned') return !task.assignedTo;
+    return true; // 'all' tab
+  });
 
   if (loading) return <div className="text-muted-foreground">Loading tasks...</div>;
 
@@ -212,8 +272,27 @@ export default function TasksPage() {
         ))}
       </div>
 
+      {/* Tabs for staff */}
+      {isStaff && (
+        <div className="flex gap-1 bg-muted/50 rounded-lg p-1 w-fit">
+          {[
+            { key: 'my', label: 'My Tasks' },
+            { key: 'all', label: 'All Tasks' },
+            { key: 'unassigned', label: 'Unassigned' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => { setActiveTab(tab.key); setSelectedTasks(new Set()); }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${activeTab === tab.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-white'}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Filters */}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-40 bg-secondary border-0 h-8 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -228,16 +307,38 @@ export default function TasksPage() {
             {PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterClient} onValueChange={setFilterClient}>
+          <SelectTrigger className="w-44 bg-secondary border-0 h-8 text-xs"><SelectValue placeholder="All Clients" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Clients</SelectItem>
+            {clients.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {canDelete && selectedTasks.size > 0 && (
+          <Button variant="destructive" size="sm" className="h-8 text-xs ml-auto" onClick={handleBulkDelete} disabled={bulkDeleting}>
+            <Trash2 size={13} className="mr-1" />
+            Delete {selectedTasks.size} selected
+          </Button>
+        )}
       </div>
 
       {/* Task List */}
       <Card className="border-0 bg-card">
         <CardContent className="pt-4">
-          {tasks.length === 0 ? (
+          {/* Select All */}
+          {canDelete && displayedTasks.length > 0 && (
+            <div className="flex items-center gap-2 pb-3 border-b border-border mb-2">
+              <button onClick={toggleSelectAll} className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedTasks.size === displayedTasks.length && displayedTasks.length > 0 ? 'bg-primary border-primary' : 'border-muted-foreground/40 hover:border-muted-foreground'}`}>
+                {selectedTasks.size === displayedTasks.length && displayedTasks.length > 0 && <CheckSquare size={12} className="text-primary-foreground" />}
+              </button>
+              <span className="text-xs text-muted-foreground">Select all ({displayedTasks.length})</span>
+            </div>
+          )}
+          {displayedTasks.length === 0 ? (
             <p className="text-center py-8 text-muted-foreground">No tasks found</p>
           ) : (
             <div className="space-y-2">
-              {tasks.map((task) => {
+              {displayedTasks.map((task) => {
                 const overdue = isOverdue(task);
                 const sc = statusConfig[overdue ? 'overdue' : task.status] || statusConfig.pending;
                 const pc = priorityConfig[task.priority] || priorityConfig.medium;
@@ -247,6 +348,11 @@ export default function TasksPage() {
                 return (
                   <div key={task._id} className="rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
                     <div className="flex items-center gap-3 py-3 px-4">
+                      {canDelete && (
+                        <button onClick={() => toggleSelect(task._id)} className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${selectedTasks.has(task._id) ? 'bg-primary border-primary' : 'border-muted-foreground/40 hover:border-muted-foreground'}`}>
+                          {selectedTasks.has(task._id) && <CheckSquare size={12} className="text-primary-foreground" />}
+                        </button>
+                      )}
                       <button onClick={() => setExpandedTask(isExpanded ? null : task._id)} className="shrink-0">
                         <ChevronDown size={14} className={`text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                       </button>
@@ -268,6 +374,17 @@ export default function TasksPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
+                        {users.length > 0 && (
+                          <Select value={task.assignedTo?._id || 'unassigned'} onValueChange={(v) => handleAssign(task._id, v === 'unassigned' ? null : v)}>
+                            <SelectTrigger className="h-7 w-28 text-xs bg-secondary border-0">
+                              <SelectValue placeholder="Assign" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {users.map((u) => <SelectItem key={u._id} value={u._id}>{u.username}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        )}
                         <Select value={task.status} onValueChange={(v) => handleStatusChange(task._id, v)}>
                           <SelectTrigger className="h-7 w-28 text-xs bg-secondary border-0"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -281,9 +398,14 @@ export default function TasksPage() {
                         )}
                       </div>
                     </div>
-                    {isExpanded && task.taskType !== 'Other' && (
-                      <div className="px-4 pb-3">
-                        <DocumentChecklist taskType={task.taskType} clientId={task.client?._id} />
+                    {isExpanded && (
+                      <div className="px-4 pb-3 space-y-2">
+                        {task.description && (
+                          <p className="text-xs text-muted-foreground">{task.description}</p>
+                        )}
+                        {task.taskType !== 'Other' && (
+                          <DocumentChecklist taskType={task.taskType} clientId={task.client?._id} taskId={task._id} />
+                        )}
                       </div>
                     )}
                   </div>

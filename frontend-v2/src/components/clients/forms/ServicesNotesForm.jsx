@@ -43,9 +43,11 @@ export default function ServicesNotesForm({ services = [], notes = '', onService
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           rows={4}
+          maxLength={2000}
           className="w-full bg-secondary border-0 rounded-lg px-3 py-2 text-sm text-white resize-none focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Internal notes about this client..."
         />
+        {notes && <p className="text-[10px] text-muted-foreground text-right">{notes.length}/2000</p>}
       </div>
     </div>
   );

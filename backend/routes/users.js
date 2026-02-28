@@ -19,7 +19,4 @@ router.put('/change-password', authMiddleware, userController.changePassword);
 // Delete a user (partner only)
 router.delete('/:id', authMiddleware, checkPermission('user:delete'), userController.deleteUser);
 
-// Get user password hash (partner only)
-router.get('/password/:id', authMiddleware, checkPermission('team:manage'), userController.getUserPassword);
-
 module.exports = router;

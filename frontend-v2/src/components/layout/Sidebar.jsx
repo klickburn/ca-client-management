@@ -14,6 +14,10 @@ import {
   UserCircle,
   Calendar,
   KeyRound,
+  Home,
+  FileText,
+  FolderOpen,
+  MessageSquare,
 } from 'lucide-react';
 
 const navItemClass = ({ isActive }) =>
@@ -25,13 +29,7 @@ const navItemClass = ({ isActive }) =>
 
 export default function Sidebar() {
   const { user } = useAuth();
-  const canViewDashboard = usePermission('dashboard:full') || usePermission('dashboard:limited');
-  const canManageTeam = usePermission('team:manage');
-  const canManageSettings = usePermission('settings:firm');
-  const canViewActivity = usePermission('activity:view');
-  const canViewBillingAll = usePermission('billing:viewAll');
-  const canViewBillingOwn = usePermission('billing:viewOwn');
-  const canViewReports = usePermission('dashboard:full');
+  const isClient = user?.role === 'client';
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-60 bg-sidebar flex flex-col z-20">
@@ -43,67 +41,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-        {canViewDashboard && (
-          <NavLink to="/dashboard" className={navItemClass}>
-            <LayoutDashboard size={18} />
-            Dashboard
-          </NavLink>
-        )}
-
-        <NavLink to="/clients" className={navItemClass}>
-          <Users size={18} />
-          Clients
-        </NavLink>
-
-        <NavLink to="/tasks" className={navItemClass}>
-          <ListTodo size={18} />
-          Tasks
-        </NavLink>
-
-        {(canViewBillingAll || canViewBillingOwn) && (
-          <NavLink to="/billing" className={navItemClass}>
-            <IndianRupee size={18} />
-            Billing
-          </NavLink>
-        )}
-
-        {canViewActivity && (
-          <NavLink to="/activity" className={navItemClass}>
-            <Activity size={18} />
-            Activity
-          </NavLink>
-        )}
-
-        <NavLink to="/compliance" className={navItemClass}>
-          <Calendar size={18} />
-          Compliance
-        </NavLink>
-
-        <NavLink to="/dsc" className={navItemClass}>
-          <KeyRound size={18} />
-          DSC Tracker
-        </NavLink>
-
-        {canViewReports && (
-          <NavLink to="/reports" className={navItemClass}>
-            <BarChart3 size={18} />
-            Reports
-          </NavLink>
-        )}
-
-        {canManageTeam && (
-          <NavLink to="/team" className={navItemClass}>
-            <UserCircle size={18} />
-            Team
-          </NavLink>
-        )}
-
-        {canManageSettings && (
-          <NavLink to="/settings" className={navItemClass}>
-            <Settings size={18} />
-            Settings
-          </NavLink>
-        )}
+        {isClient ? <ClientNav /> : <StaffNav />}
       </nav>
 
       {/* User info at bottom */}
@@ -125,5 +63,112 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+function ClientNav() {
+  return (
+    <>
+      <NavLink to="/portal" end className={navItemClass}>
+        <Home size={18} />
+        Portal
+      </NavLink>
+      <NavLink to="/portal/filings" className={navItemClass}>
+        <FileText size={18} />
+        My Filings
+      </NavLink>
+      <NavLink to="/portal/documents" className={navItemClass}>
+        <FolderOpen size={18} />
+        Documents
+      </NavLink>
+      <NavLink to="/portal/messages" className={navItemClass}>
+        <MessageSquare size={18} />
+        Messages
+      </NavLink>
+      <NavLink to="/portal/billing" className={navItemClass}>
+        <IndianRupee size={18} />
+        Billing
+      </NavLink>
+      <NavLink to="/settings" className={navItemClass}>
+        <Settings size={18} />
+        Settings
+      </NavLink>
+    </>
+  );
+}
+
+function StaffNav() {
+  const canViewDashboard = usePermission('dashboard:full') || usePermission('dashboard:limited');
+  const canManageTeam = usePermission('team:manage');
+  const canManageSettings = usePermission('settings:firm');
+  const canViewActivity = usePermission('activity:view');
+  const canViewBillingAll = usePermission('billing:viewAll');
+  const canViewBillingOwn = usePermission('billing:viewOwn');
+  const canViewReports = usePermission('dashboard:full');
+
+  return (
+    <>
+      {canViewDashboard && (
+        <NavLink to="/dashboard" className={navItemClass}>
+          <LayoutDashboard size={18} />
+          Dashboard
+        </NavLink>
+      )}
+
+      <NavLink to="/clients" className={navItemClass}>
+        <Users size={18} />
+        Clients
+      </NavLink>
+
+      <NavLink to="/tasks" className={navItemClass}>
+        <ListTodo size={18} />
+        Tasks
+      </NavLink>
+
+      {(canViewBillingAll || canViewBillingOwn) && (
+        <NavLink to="/billing" className={navItemClass}>
+          <IndianRupee size={18} />
+          Billing
+        </NavLink>
+      )}
+
+      {canViewActivity && (
+        <NavLink to="/activity" className={navItemClass}>
+          <Activity size={18} />
+          Activity
+        </NavLink>
+      )}
+
+      <NavLink to="/compliance" className={navItemClass}>
+        <Calendar size={18} />
+        Compliance
+      </NavLink>
+
+      <NavLink to="/dsc" className={navItemClass}>
+        <KeyRound size={18} />
+        DSC Tracker
+      </NavLink>
+
+      {canViewReports && (
+        <NavLink to="/reports" className={navItemClass}>
+          <BarChart3 size={18} />
+          Reports
+        </NavLink>
+      )}
+
+      {canManageTeam && (
+        <NavLink to="/team" className={navItemClass}>
+          <UserCircle size={18} />
+          Team
+        </NavLink>
+      )}
+
+      {canManageSettings && (
+        <NavLink to="/settings" className={navItemClass}>
+          <Settings size={18} />
+          Settings
+        </NavLink>
+      )}
+    </>
   );
 }

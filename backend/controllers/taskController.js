@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const Filing = require('../models/Filing');
 const ActivityLog = require('../models/ActivityLog');
 const Notification = require('../models/Notification');
 
@@ -101,6 +102,18 @@ const updateTask = async (req, res) => {
         if (task.status === 'completed' && !wasCompleted) {
             task.completedAt = new Date();
             await logActivity('task:complete', req.user.id, task._id, `Completed task: ${task.title}`);
+            // Cascade: update linked Filing to 'filed' if it exists
+            try {
+                const filing = await Filing.findOne({ task: task._id });
+                if (filing && filing.status === 'in_progress') {
+                    filing.status = 'filed';
+                    filing.filedDate = new Date();
+                    filing.filedBy = req.user.id;
+                    await filing.save();
+                }
+            } catch (filingErr) {
+                console.error('Filing cascade error:', filingErr.message);
+            }
         } else {
             await logActivity('task:update', req.user.id, task._id, `Updated task: ${task.title}`);
         }
@@ -166,4 +179,62 @@ const getTaskStats = async (req, res) => {
     }
 };
 
-module.exports = { createTask, getTasks, updateTask, deleteTask, getTaskStats };
+// Update task checklist item
+const updateChecklist = async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (!task) return res.status(404).json({ message: 'Task not found' });
+
+        // Only assignee, creator, partner, or seniorCA can update checklist
+        const isOwner = task.assignedTo?.toString() === req.user.id || task.createdBy?.toString() === req.user.id;
+        const isManager = ['partner', 'seniorCA'].includes(req.user.role);
+        if (!isOwner && !isManager) {
+            return res.status(403).json({ message: 'Not authorized to update this checklist' });
+        }
+
+        const { itemName, collected, note } = req.body;
+
+        // Initialize checklist from template if empty
+        if (!task.checklist || task.checklist.length === 0) {
+            const { DOCUMENT_CHECKLISTS } = require('../lib/complianceDeadlines');
+            const template = DOCUMENT_CHECKLISTS[task.taskType] || [];
+            task.checklist = template.map(item => ({
+                name: item.name,
+                collected: false,
+                note: '',
+            }));
+        }
+
+        // Find and update the specific item
+        const item = task.checklist.find(i => i.name === itemName);
+        if (!item) {
+            return res.status(404).json({ message: 'Checklist item not found' });
+        }
+
+        if (typeof collected === 'boolean') item.collected = collected;
+        if (typeof note === 'string') item.note = note;
+
+        await task.save();
+        res.json(task.checklist);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+// Bulk delete tasks
+const bulkDeleteTasks = async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: 'ids array is required' });
+        }
+
+        const result = await Task.deleteMany({ _id: { $in: ids } });
+        await logActivity('task:delete', req.user.id, null, `Bulk deleted ${result.deletedCount} tasks`);
+        res.json({ message: `Deleted ${result.deletedCount} tasks`, deletedCount: result.deletedCount });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = { createTask, getTasks, updateTask, updateChecklist, deleteTask, bulkDeleteTasks, getTaskStats };

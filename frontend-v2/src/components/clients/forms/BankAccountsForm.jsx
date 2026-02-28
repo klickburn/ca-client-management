@@ -27,17 +27,30 @@ export default function BankAccountsForm({ accounts = [], onChange }) {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              ['Bank Name', 'bankName'],
-              ['Account Number', 'accountNumber'],
-              ['Account Type', 'accountType'],
-              ['IFSC Code', 'ifscCode'],
-              ['Branch', 'branch'],
-              ['Customer ID', 'customerId'],
-              ['Password', 'password'],
-            ].map(([label, field]) => (
+              ['Bank Name', 'bankName', { }],
+              ['Account Number', 'accountNumber', { pattern: '[0-9]+', maxLength: 18 }],
+              ['Account Type', 'accountType', { }],
+              ['IFSC Code', 'ifscCode', { pattern: '[A-Z]{4}0[A-Z0-9]{6}', maxLength: 11, placeholder: 'ABCD0123456' }],
+              ['Branch', 'branch', { }],
+              ['Customer ID', 'customerId', { }],
+              ['Password', 'password', { type: 'password' }],
+            ].map(([label, field, props]) => (
               <div key={field} className="space-y-1">
                 <Label className="text-xs">{label}</Label>
-                <Input value={acc[field] || ''} onChange={(e) => update(i, field, e.target.value)} className="bg-secondary border-0 h-9" />
+                <Input
+                  value={acc[field] || ''}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    if (field === 'ifscCode') val = val.toUpperCase();
+                    if (field === 'accountNumber') val = val.replace(/\D/g, '');
+                    update(i, field, val);
+                  }}
+                  className="bg-secondary border-0 h-9"
+                  {...props}
+                />
+                {field === 'ifscCode' && acc.ifscCode && acc.ifscCode.length === 11 && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(acc.ifscCode) && (
+                  <p className="text-[10px] text-red-500">Invalid IFSC format</p>
+                )}
               </div>
             ))}
           </div>

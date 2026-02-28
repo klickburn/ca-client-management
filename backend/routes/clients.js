@@ -10,6 +10,12 @@ router.post('/', authMiddleware, checkPermission('client:create'), clientControl
 // Get all clients (filtered by role)
 router.get('/', authMiddleware, filterClientAccess, clientController.getClients);
 
+// Get portal credentials for a client (partner, seniorCA only) — must be before /:id
+router.get('/:id/portal', authMiddleware, checkPermission('client:edit'), clientController.getPortalCredentials);
+
+// Reset portal password (partner, seniorCA only)
+router.post('/:id/portal/reset-password', authMiddleware, checkPermission('client:edit'), clientController.resetPortalPassword);
+
 // Get a specific client by ID (access checked in controller)
 router.get('/:id', authMiddleware, filterClientAccess, clientController.getClientById);
 

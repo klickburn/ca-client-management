@@ -2,13 +2,8 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/auth');
 
 const authMiddleware = (req, res, next) => {
-    // Check for token in Authorization header
-    let token = req.header('Authorization')?.replace('Bearer ', '');
-    
-    // If no token in header, check query parameters
-    if (!token && req.query && req.query.token) {
-        token = req.query.token;
-    }
+    // Only accept token from Authorization header
+    const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
         return res.status(401).json({ message: 'Access denied. No token provided.' });

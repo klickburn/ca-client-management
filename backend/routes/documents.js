@@ -4,6 +4,9 @@ const documentController = require('../controllers/documentController');
 const authMiddleware = require('../middleware/auth');
 const { checkPermission } = require('../middleware/permissions');
 
+// Get all pending documents for review (partner/seniorCA only)
+router.get('/documents/pending', authMiddleware, checkPermission('document:verify'), documentController.getPendingDocuments);
+
 // Get presigned upload URL (all authenticated users can upload)
 router.post('/:clientId/documents/upload-url', authMiddleware, checkPermission('document:upload'), documentController.getUploadUrl);
 

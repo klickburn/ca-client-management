@@ -5,7 +5,7 @@ const connectDB = async () => {
         // Use environment variable for MongoDB URI or fall back to a local development DB
         const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/ca-client-db';
         
-        console.log('Attempting to connect to MongoDB with URI:', uri);
+        console.log('Attempting to connect to MongoDB...');
         
         // Add required options to prevent deprecation warnings
         const options = {

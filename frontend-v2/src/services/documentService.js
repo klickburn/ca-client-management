@@ -71,4 +71,9 @@ export const documentService = {
   async deleteDocument(clientId, documentId) {
     await api.delete(`/clients/${clientId}/documents/${documentId}`);
   },
+
+  async getPendingDocuments() {
+    const response = await api.get('/clients/documents/pending');
+    return response.data;
+  },
 };

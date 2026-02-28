@@ -125,7 +125,7 @@ exports.sendDeadlineAlerts = async (req, res) => {
 
                     await Notification.create({
                         recipient: recipientId,
-                        type: 'task:due',
+                        type: 'task:due_soon',
                         title: `${task.title} due in ${days} day${days > 1 ? 's' : ''}`,
                         message: `${task.client?.name || 'Unknown client'} — ${task.title} is due on ${task.dueDate.toLocaleDateString('en-IN')}`,
                         link: '/tasks',

@@ -53,6 +53,15 @@ const taskSchema = new mongoose.Schema({
     notes: {
         type: String,
     },
+    checklist: [{
+        name: String,
+        collected: { type: Boolean, default: false },
+        note: String,
+    }],
 }, { timestamps: true });
+
+taskSchema.index({ client: 1, status: 1 });
+taskSchema.index({ assignedTo: 1, status: 1 });
+taskSchema.index({ dueDate: 1 });
 
 module.exports = mongoose.model('Task', taskSchema);

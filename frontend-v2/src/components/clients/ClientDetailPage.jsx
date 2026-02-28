@@ -8,7 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import DocumentManager from '@/components/documents/DocumentManager';
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar } from 'lucide-react';
+import FilingTracker from '@/components/clients/FilingTracker';
+import Messages from '@/components/portal/Messages';
+import DocRequestManager from '@/components/clients/DocRequestManager';
+import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Key, Copy, Check, User } from 'lucide-react';
 
 function InfoRow({ label, value }) {
   if (!value) return null;
@@ -57,12 +60,20 @@ export default function ClientDetailPage() {
   const canEdit = usePermission('client:edit');
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [portal, setPortal] = useState(null);
+  const [resetCreds, setResetCreds] = useState(null);
+  const [copied, setCopied] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     const fetchClient = async () => {
       try {
         const data = await clientService.getClient(id);
         setClient(data);
+        if (canEdit) {
+          const portalData = await clientService.getPortalCredentials(id);
+          setPortal(portalData);
+        }
       } catch (error) {
         console.error('Error fetching client:', error);
       } finally {
@@ -71,6 +82,25 @@ export default function ClientDetailPage() {
     };
     fetchClient();
   }, [id]);
+
+  const handleResetPassword = async () => {
+    if (!confirm('Reset this client\'s portal password? The old password will no longer work.')) return;
+    setResetting(true);
+    try {
+      const result = await clientService.resetPortalPassword(id);
+      setResetCreds(result);
+    } catch (error) {
+      console.error('Error resetting password:', error);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const copyToClipboard = (text, field) => {
+    navigator.clipboard.writeText(text);
+    setCopied(field);
+    setTimeout(() => setCopied(''), 2000);
+  };
 
   if (loading) return <div className="text-muted-foreground">Loading...</div>;
   if (!client) return <div className="text-muted-foreground">Client not found</div>;
@@ -106,7 +136,10 @@ export default function ClientDetailPage() {
           <TabsTrigger value="identity">ID Documents</TabsTrigger>
           <TabsTrigger value="credentials">Credentials</TabsTrigger>
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
+          <TabsTrigger value="filings">Filings</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="requests">Doc Requests</TabsTrigger>
+          <TabsTrigger value="messages">Messages</TabsTrigger>
         </TabsList>
 
         {/* Basic Info */}
@@ -139,6 +172,51 @@ export default function ClientDetailPage() {
                 {client.notes && <InfoRow label="Notes" value={client.notes} />}
               </CardContent>
             </Card>
+
+            {canEdit && portal && (
+              <Card className="border-0 bg-card md:col-span-2">
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Key size={16} /> Portal Access</CardTitle></CardHeader>
+                <CardContent>
+                  {portal.hasAccount ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm text-muted-foreground">Username</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-white font-medium font-mono">{portal.username}</span>
+                          <button onClick={() => copyToClipboard(portal.username, 'username')} className="text-muted-foreground hover:text-white">
+                            {copied === 'username' ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                      {resetCreds ? (
+                        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 space-y-2">
+                          <p className="text-xs text-green-400 font-medium">New password generated — copy it now, it won't be shown again.</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">New Password</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-white font-medium font-mono">{resetCreds.password}</span>
+                              <button onClick={() => copyToClipboard(resetCreds.password, 'password')} className="text-muted-foreground hover:text-white">
+                                {copied === 'password' ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between py-2">
+                          <span className="text-sm text-muted-foreground">Password</span>
+                          <Button variant="outline" size="sm" onClick={handleResetPassword} disabled={resetting} className="text-xs">
+                            <Key size={13} className="mr-1" />
+                            {resetting ? 'Resetting...' : 'Reset Password'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No portal account created for this client.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {client.addresses?.length > 0 && (
               <Card className="border-0 bg-card md:col-span-2">
@@ -244,9 +322,24 @@ export default function ClientDetailPage() {
           </div>
         </TabsContent>
 
+        {/* Filings */}
+        <TabsContent value="filings">
+          <FilingTracker clientId={id} />
+        </TabsContent>
+
         {/* Documents */}
         <TabsContent value="documents">
           <DocumentManager clientId={id} />
+        </TabsContent>
+
+        {/* Doc Requests */}
+        <TabsContent value="requests">
+          <DocRequestManager clientId={id} />
+        </TabsContent>
+
+        {/* Messages */}
+        <TabsContent value="messages">
+          <Messages clientId={id} />
         </TabsContent>
       </Tabs>
     </div>

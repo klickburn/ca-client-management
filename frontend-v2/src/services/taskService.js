@@ -29,4 +29,14 @@ export const taskService = {
   async deleteTask(taskId) {
     await api.delete(`/tasks/${taskId}`);
   },
+
+  async bulkDeleteTasks(ids) {
+    const response = await api.post('/tasks/bulk-delete', { ids });
+    return response.data;
+  },
+
+  async updateChecklist(taskId, itemName, collected, note) {
+    const response = await api.put(`/tasks/${taskId}/checklist`, { itemName, collected, note });
+    return response.data;
+  },
 };

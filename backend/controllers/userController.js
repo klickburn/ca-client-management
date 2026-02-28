@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Task = require('../models/Task');
 const bcrypt = require('bcryptjs');
 const { CREATION_HIERARCHY } = require('../middleware/permissions');
 
@@ -95,6 +96,10 @@ exports.deleteUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
+        // Unassign tasks that were assigned to this user
+        await Task.updateMany({ assignedTo: user._id }, { $unset: { assignedTo: '' } });
+        // Clear supervisorId references in article users supervised by this user
+        await User.updateMany({ supervisorId: user._id }, { $unset: { supervisorId: '' } });
         res.status(200).json({ message: 'User deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error deleting user', error: error.message });
@@ -108,8 +113,11 @@ exports.changePassword = async (req, res) => {
         if (!currentPassword || !newPassword) {
             return res.status(400).json({ message: 'Current and new password are required' });
         }
-        if (newPassword.length < 6) {
-            return res.status(400).json({ message: 'New password must be at least 6 characters' });
+        if (newPassword.length < 8) {
+            return res.status(400).json({ message: 'Password must be at least 8 characters' });
+        }
+        if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+            return res.status(400).json({ message: 'Password must contain uppercase, lowercase, and a number' });
         }
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
@@ -127,19 +135,3 @@ exports.changePassword = async (req, res) => {
     }
 };
 
-// Get user password hash (partner only)
-exports.getUserPassword = async (req, res) => {
-    try {
-        const user = await User.findById(req.params.id);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        res.status(200).json({
-            username: user.username,
-            hashedPassword: user.password
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Error retrieving password', error: error.message });
-    }
-};

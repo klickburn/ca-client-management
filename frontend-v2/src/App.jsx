@@ -15,6 +15,11 @@ import TeamPage from '@/components/users/TeamPage';
 import SettingsPage from '@/components/settings/SettingsPage';
 import CompliancePage from '@/components/compliance/CompliancePage';
 import DSCPage from '@/components/dsc/DSCPage';
+import ClientPortal from '@/components/portal/ClientPortal';
+import MyFilings from '@/components/portal/MyFilings';
+import PortalDocuments from '@/components/portal/PortalDocuments';
+import Messages from '@/components/portal/Messages';
+import RoleRoute from '@/components/auth/RoleRoute';
 
 export default function App() {
   return (
@@ -25,18 +30,32 @@ export default function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/clients" element={<ClientsPage />} />
-              <Route path="/clients/new" element={<ClientFormPage />} />
-              <Route path="/clients/:id" element={<ClientDetailPage />} />
-              <Route path="/clients/:id/edit" element={<ClientFormPage />} />
-              <Route path="/tasks" element={<TasksPage />} />
+              {/* Staff-only routes */}
+              <Route element={<RoleRoute blocked={['client']} />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/clients" element={<ClientsPage />} />
+                <Route path="/clients/new" element={<ClientFormPage />} />
+                <Route path="/clients/:id" element={<ClientDetailPage />} />
+                <Route path="/clients/:id/edit" element={<ClientFormPage />} />
+                <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/activity" element={<ActivityPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/compliance" element={<CompliancePage />} />
+                <Route path="/dsc" element={<DSCPage />} />
+                <Route path="/team" element={<TeamPage />} />
+              </Route>
+
+              {/* Client portal routes */}
+              <Route element={<RoleRoute allowed={['client']} />}>
+                <Route path="/portal" element={<ClientPortal />} />
+                <Route path="/portal/filings" element={<MyFilings />} />
+                <Route path="/portal/documents" element={<PortalDocuments />} />
+                <Route path="/portal/messages" element={<Messages />} />
+                <Route path="/portal/billing" element={<BillingPage />} />
+              </Route>
+
+              {/* Shared routes */}
               <Route path="/billing" element={<BillingPage />} />
-              <Route path="/activity" element={<ActivityPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/compliance" element={<CompliancePage />} />
-              <Route path="/dsc" element={<DSCPage />} />
-              <Route path="/team" element={<TeamPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Route>

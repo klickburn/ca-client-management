@@ -54,7 +54,10 @@ export default function AddressForm({ addresses = [], onChange }) {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Postal Code</Label>
-              <Input value={addr.postalCode || ''} onChange={(e) => update(i, 'postalCode', e.target.value)} className="bg-secondary border-0 h-9" />
+              <Input value={addr.postalCode || ''} onChange={(e) => update(i, 'postalCode', e.target.value.replace(/\D/g, ''))} className="bg-secondary border-0 h-9" maxLength={6} pattern="[0-9]{6}" placeholder="400001" />
+              {addr.postalCode && addr.postalCode.length > 0 && addr.postalCode.length < 6 && (
+                <p className="text-[10px] text-muted-foreground">PIN code must be 6 digits</p>
+              )}
             </div>
           </div>
         </div>

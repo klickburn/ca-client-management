@@ -64,6 +64,12 @@ const getInvoices = async (req, res) => {
             else return res.json([]);
         }
 
+        // Auto-mark overdue invoices (sent + past due date)
+        await Invoice.updateMany(
+            { status: 'sent', dueDate: { $lt: new Date() } },
+            { $set: { status: 'overdue' } }
+        );
+
         const invoices = await Invoice.find(filter)
             .populate('client', 'name email')
             .populate('createdBy', 'username')

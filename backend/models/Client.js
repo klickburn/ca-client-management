@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { encrypt, decrypt } = require('../lib/fieldEncryption');
 
 const addressSchema = new mongoose.Schema({
     addressType: {
@@ -198,5 +199,45 @@ const clientSchema = new mongoose.Schema({
         }
     }]
 });
+
+// Encrypt sensitive password fields before saving
+clientSchema.pre('save', function (next) {
+    const credPaths = ['credentials.incomeTax.password', 'credentials.gst.password', 'credentials.tan.password', 'credentials.traces.password'];
+    for (const path of credPaths) {
+        const val = this.get(path);
+        if (val && !val.startsWith('enc:')) this.set(path, encrypt(val));
+    }
+    for (const arr of ['bankAccounts', 'loanAccounts', 'dematAccounts']) {
+        if (this[arr]) {
+            for (const item of this[arr]) {
+                if (item.password && !item.password.startsWith('enc:')) {
+                    item.password = encrypt(item.password);
+                }
+            }
+        }
+    }
+    next();
+});
+
+// Decrypt password fields when converting to JSON
+clientSchema.methods.toJSON = function () {
+    const obj = this.toObject();
+    const credKeys = ['incomeTax', 'gst', 'tan', 'traces'];
+    if (obj.credentials) {
+        for (const key of credKeys) {
+            if (obj.credentials[key]?.password) {
+                obj.credentials[key].password = decrypt(obj.credentials[key].password);
+            }
+        }
+    }
+    for (const arr of ['bankAccounts', 'loanAccounts', 'dematAccounts']) {
+        if (obj[arr]) {
+            for (const item of obj[arr]) {
+                if (item.password) item.password = decrypt(item.password);
+            }
+        }
+    }
+    return obj;
+};
 
 module.exports = mongoose.model('Client', clientSchema);

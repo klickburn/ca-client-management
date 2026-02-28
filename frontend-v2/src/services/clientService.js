@@ -24,4 +24,14 @@ export const clientService = {
   async deleteClient(clientId) {
     await api.delete(`/clients/${clientId}`);
   },
+
+  async getPortalCredentials(clientId) {
+    const response = await api.get(`/clients/${clientId}/portal`);
+    return response.data;
+  },
+
+  async resetPortalPassword(clientId) {
+    const response = await api.post(`/clients/${clientId}/portal/reset-password`);
+    return response.data;
+  },
 };

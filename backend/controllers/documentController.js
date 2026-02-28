@@ -1,4 +1,6 @@
 const Client = require('../models/Client');
+const User = require('../models/User');
+const DocRequest = require('../models/DocRequest');
 const ActivityLog = require('../models/ActivityLog');
 const Notification = require('../models/Notification');
 const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
@@ -94,6 +96,25 @@ exports.confirmUpload = async (req, res) => {
         await client.save();
 
         await logActivity('document:upload', req.user.id, clientId, `Uploaded document: ${document.name}`);
+
+        // Notify Partner/SeniorCA about new document needing review
+        try {
+            const uploader = await User.findById(req.user.id).select('username');
+            const reviewers = await User.find({ role: { $in: ['partner', 'seniorCA'] } }).select('_id');
+            for (const reviewer of reviewers) {
+                if (String(reviewer._id) === String(req.user.id)) continue;
+                await Notification.create({
+                    recipient: reviewer._id,
+                    type: 'document:uploaded',
+                    title: 'New Document Uploaded',
+                    message: `${uploader?.username || 'Someone'} uploaded "${document.name}" for ${client.name}`,
+                    link: `/clients/${clientId}`,
+                });
+            }
+        } catch (notifErr) {
+            console.error('Notification error:', notifErr.message);
+        }
+
         res.status(200).json({ message: 'Upload confirmed', document });
     } catch (error) {
         console.error('Error confirming upload:', error);
@@ -185,6 +206,45 @@ exports.verifyDocument = async (req, res) => {
         await client.save();
 
         await logActivity('document:verify', req.user.id, clientId, `Verified document: ${document.name}`);
+
+        // Auto-fulfill matching DocRequest items
+        try {
+            const docRequests = await DocRequest.find({ client: clientId, status: { $ne: 'fulfilled' } });
+            for (const dr of docRequests) {
+                let changed = false;
+                for (const item of dr.documents) {
+                    if (!item.fulfilled && item.name === document.name) {
+                        item.fulfilled = true;
+                        item.documentId = document._id;
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    const allFulfilled = dr.documents.every(d => d.fulfilled);
+                    const someFulfilled = dr.documents.some(d => d.fulfilled);
+                    dr.status = allFulfilled ? 'fulfilled' : someFulfilled ? 'partially_fulfilled' : 'pending';
+                    await dr.save();
+                }
+            }
+        } catch (drErr) {
+            console.error('DocRequest cascade error:', drErr.message);
+        }
+
+        // Notify the uploader
+        if (document.uploadedBy && String(document.uploadedBy) !== String(req.user.id)) {
+            try {
+                await Notification.create({
+                    recipient: document.uploadedBy,
+                    type: 'document:verified',
+                    title: 'Document Approved',
+                    message: `Your document "${document.name}" for ${client.name} has been verified`,
+                    link: `/clients/${clientId}`,
+                });
+            } catch (notifErr) {
+                console.error('Notification error:', notifErr.message);
+            }
+        }
+
         res.status(200).json({ message: 'Document verified', document });
     } catch (error) {
         console.error('Error verifying document:', error);
@@ -216,6 +276,22 @@ exports.rejectDocument = async (req, res) => {
         await client.save();
 
         await logActivity('document:reject', req.user.id, clientId, `Rejected document: ${document.name}`);
+
+        // Notify the uploader
+        if (document.uploadedBy && String(document.uploadedBy) !== String(req.user.id)) {
+            try {
+                await Notification.create({
+                    recipient: document.uploadedBy,
+                    type: 'document:rejected',
+                    title: 'Document Rejected',
+                    message: `Your document "${document.name}" was rejected${reason ? ': ' + reason : ''}`,
+                    link: `/clients/${clientId}`,
+                });
+            } catch (notifErr) {
+                console.error('Notification error:', notifErr.message);
+            }
+        }
+
         res.status(200).json({ message: 'Document rejected', document });
     } catch (error) {
         console.error('Error rejecting document:', error);
@@ -258,6 +334,40 @@ exports.deleteDocument = async (req, res) => {
         res.status(200).json({ message: 'Document deleted successfully' });
     } catch (error) {
         console.error('Error deleting document:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// Get all pending documents across all clients (for review dashboard)
+exports.getPendingDocuments = async (req, res) => {
+    try {
+        const clients = await Client.find({ 'documents.verificationStatus': 'pending' })
+            .select('name documents')
+            .populate('documents.uploadedBy', 'username');
+
+        const pending = [];
+        for (const client of clients) {
+            for (const doc of client.documents) {
+                if (doc.verificationStatus === 'pending') {
+                    pending.push({
+                        clientId: client._id,
+                        clientName: client.name,
+                        documentId: doc._id,
+                        name: doc.name,
+                        category: doc.category,
+                        uploadedAt: doc.uploadedAt,
+                        uploadedBy: doc.uploadedBy?.username || 'Unknown',
+                    });
+                }
+            }
+        }
+
+        // Sort oldest first (review queue)
+        pending.sort((a, b) => new Date(a.uploadedAt) - new Date(b.uploadedAt));
+
+        res.json(pending);
+    } catch (error) {
+        console.error('Error fetching pending documents:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
