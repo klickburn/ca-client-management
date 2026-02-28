@@ -7,7 +7,7 @@ const activityLogSchema = new mongoose.Schema({
         enum: [
             'client:create', 'client:update', 'client:delete',
             'document:upload', 'document:verify', 'document:reject', 'document:delete',
-            'task:create', 'task:update', 'task:complete', 'task:delete',
+            'task:create', 'task:update', 'task:complete', 'task:delete', 'task:bulk_generate',
             'invoice:create', 'invoice:update', 'invoice:delete', 'invoice:payment',
             'user:create', 'user:update', 'user:delete',
             'login',

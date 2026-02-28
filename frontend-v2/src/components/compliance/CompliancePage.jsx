@@ -11,7 +11,7 @@ import { Calendar, Zap, Bell, CheckCircle2, Clock, AlertTriangle } from 'lucide-
 
 const FISCAL_YEARS = ['2025-2026', '2024-2025', '2023-2024'];
 const MONTHS = ['All', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const TASK_TYPES = ['All', 'ITR Filing', 'GST Filing', 'TDS Return', 'Audit', 'ROC Filing', 'Tax Planning'];
+const TASK_TYPES = ['All', 'ITR Filing', 'GST Filing', 'TDS Return', 'Audit', 'ROC Filing', 'Tax Planning', 'Bookkeeping'];
 
 export default function CompliancePage() {
   const [calendar, setCalendar] = useState(null);
@@ -21,6 +21,7 @@ export default function CompliancePage() {
   const [generating, setGenerating] = useState(false);
   const [alerting, setAlerting] = useState(false);
   const [result, setResult] = useState('');
+  const [genSummary, setGenSummary] = useState(null);
   const canGenerate = usePermission('task:create');
   const canAlert = usePermission('dashboard:full');
 
@@ -41,9 +42,13 @@ export default function CompliancePage() {
     if (!confirm('This will auto-create compliance tasks for ALL clients based on their services. Continue?')) return;
     setGenerating(true);
     setResult('');
+    setGenSummary(null);
     try {
       const data = await complianceService.generateTasks(fiscalYear);
       setResult(data.message);
+      if (data.clients && data.clients.length > 0) {
+        setGenSummary(data);
+      }
     } catch (error) {
       setResult('Error generating tasks');
     } finally {
@@ -131,6 +136,35 @@ export default function CompliancePage() {
 
       {result && (
         <div className="bg-primary/10 text-primary text-sm px-4 py-2 rounded-lg">{result}</div>
+      )}
+
+      {genSummary && (
+        <Card className="border-0 bg-card">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">Generation Summary</CardTitle>
+              <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => setGenSummary(null)}>Dismiss</Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 mb-3 text-xs">
+              <span className="text-green-500">{genSummary.created} created</span>
+              <span className="text-yellow-500">{genSummary.skipped} skipped</span>
+              <span className="text-blue-500">{genSummary.filingsCreated} filings</span>
+              {genSummary.errors > 0 && <span className="text-red-500">{genSummary.errors} errors</span>}
+            </div>
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {genSummary.clients.map((c) => (
+                <div key={c.clientId} className="flex items-center gap-2 text-xs py-1 px-2 rounded bg-muted/50">
+                  <span className="text-white flex-1 truncate">{c.clientName}</span>
+                  {c.tasksCreated > 0 && <Badge variant="secondary" className="text-[10px]">+{c.tasksCreated}</Badge>}
+                  {c.tasksSkipped > 0 && <span className="text-muted-foreground">{c.tasksSkipped} skipped</span>}
+                  {c.errors.length > 0 && <span className="text-red-500">{c.errors.length} errors</span>}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Filters */}

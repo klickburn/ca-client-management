@@ -26,24 +26,27 @@ function getDeadlinesForYear(fiscalYear) {
     );
 
     // ── GST Monthly Deadlines (for each month in the FY) ──
+    // Filing due in month m is for the PREVIOUS month (e.g., GSTR-1 due Apr 11 = March return)
     for (let m = 4; m <= 12; m++) {
         const year = startYear;
         const month = String(m).padStart(2, '0');
-        const prevMonth = new Date(year, m - 1, 1).toLocaleString('en-IN', { month: 'long' });
+        const returnMonth = new Date(year, m - 2, 1).toLocaleString('en-IN', { month: 'long' });
+        const returnYear = m === 4 ? startYear : year; // March return → same startYear
         deadlines.push(
-            { date: `${year}-${month}-11`, title: `GSTR-1 (${prevMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'high', description: `File GSTR-1 for ${prevMonth} ${year}` },
-            { date: `${year}-${month}-13`, title: `GSTR-1 IFF (${prevMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'medium', description: `GSTR-1 IFF for QRMP taxpayers — ${prevMonth} ${year}` },
-            { date: `${year}-${month}-20`, title: `GSTR-3B (${prevMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'high', description: `File GSTR-3B for ${prevMonth} ${year}` },
+            { date: `${year}-${month}-11`, title: `GSTR-1 (${returnMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'high', description: `File GSTR-1 for ${returnMonth} ${returnYear}` },
+            { date: `${year}-${month}-13`, title: `GSTR-1 IFF (${returnMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'medium', description: `GSTR-1 IFF for QRMP taxpayers — ${returnMonth} ${returnYear}` },
+            { date: `${year}-${month}-20`, title: `GSTR-3B (${returnMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'high', description: `File GSTR-3B for ${returnMonth} ${returnYear}` },
         );
     }
     for (let m = 1; m <= 3; m++) {
         const year = endYear;
         const month = String(m).padStart(2, '0');
-        const prevMonth = new Date(year, m - 1, 1).toLocaleString('en-IN', { month: 'long' });
+        const returnMonth = new Date(year, m - 2, 1).toLocaleString('en-IN', { month: 'long' });
+        const returnYear = m === 1 ? startYear : endYear; // Jan filing = December of startYear
         deadlines.push(
-            { date: `${year}-${month}-11`, title: `GSTR-1 (${prevMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'high', description: `File GSTR-1 for ${prevMonth} ${year}` },
-            { date: `${year}-${month}-13`, title: `GSTR-1 IFF (${prevMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'medium', description: `GSTR-1 IFF for QRMP taxpayers — ${prevMonth} ${year}` },
-            { date: `${year}-${month}-20`, title: `GSTR-3B (${prevMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'high', description: `File GSTR-3B for ${prevMonth} ${year}` },
+            { date: `${year}-${month}-11`, title: `GSTR-1 (${returnMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'high', description: `File GSTR-1 for ${returnMonth} ${returnYear}` },
+            { date: `${year}-${month}-13`, title: `GSTR-1 IFF (${returnMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'medium', description: `GSTR-1 IFF for QRMP taxpayers — ${returnMonth} ${returnYear}` },
+            { date: `${year}-${month}-20`, title: `GSTR-3B (${returnMonth})`, taskType: 'GST Filing', service: 'GST Filing', priority: 'high', description: `File GSTR-3B for ${returnMonth} ${returnYear}` },
         );
     }
 
@@ -54,20 +57,21 @@ function getDeadlinesForYear(fiscalYear) {
     );
 
     // ── TDS Deadlines (monthly) ──
+    // TDS due in month m is for the PREVIOUS month (e.g., TDS due Apr 7 = March deductions)
     for (let m = 4; m <= 12; m++) {
         const year = startYear;
         const month = String(m).padStart(2, '0');
-        const prevMonth = new Date(year, m - 1, 1).toLocaleString('en-IN', { month: 'long' });
+        const returnMonth = new Date(year, m - 2, 1).toLocaleString('en-IN', { month: 'long' });
         deadlines.push(
-            { date: `${year}-${month}-07`, title: `TDS Deposit (${prevMonth})`, taskType: 'TDS Return', service: 'Income Tax Filing', priority: 'high', description: `Deposit TDS deducted in ${prevMonth} ${year}` },
+            { date: `${year}-${month}-07`, title: `TDS Deposit (${returnMonth})`, taskType: 'TDS Return', service: 'Income Tax Filing', priority: 'high', description: `Deposit TDS deducted in ${returnMonth} ${year}` },
         );
     }
     for (let m = 1; m <= 3; m++) {
         const year = endYear;
         const month = String(m).padStart(2, '0');
-        const prevMonth = new Date(year, m - 1, 1).toLocaleString('en-IN', { month: 'long' });
+        const returnMonth = new Date(year, m - 2, 1).toLocaleString('en-IN', { month: 'long' });
         deadlines.push(
-            { date: `${year}-${month}-07`, title: `TDS Deposit (${prevMonth})`, taskType: 'TDS Return', service: 'Income Tax Filing', priority: 'high', description: `Deposit TDS deducted in ${prevMonth} ${year}` },
+            { date: `${year}-${month}-07`, title: `TDS Deposit (${returnMonth})`, taskType: 'TDS Return', service: 'Income Tax Filing', priority: 'high', description: `Deposit TDS deducted in ${returnMonth} ${year}` },
         );
     }
 
@@ -89,6 +93,24 @@ function getDeadlinesForYear(fiscalYear) {
         { date: `${endYear}-10-30`, title: 'ROC Annual Return (Form MGT-7)', taskType: 'ROC Filing', service: 'Company Formation', priority: 'high', description: `File annual return with ROC for FY ${fiscalYear}` },
         { date: `${endYear}-10-30`, title: 'ROC Financial Statements (Form AOC-4)', taskType: 'ROC Filing', service: 'Company Formation', priority: 'high', description: `File financial statements with ROC for FY ${fiscalYear}` },
     );
+
+    // ── Monthly Bookkeeping (for "Accounting" service clients) ──
+    for (let m = 4; m <= 12; m++) {
+        const year = startYear;
+        const month = String(m).padStart(2, '0');
+        const monthName = new Date(year, m - 1, 1).toLocaleString('en-IN', { month: 'long' });
+        deadlines.push(
+            { date: `${year}-${month}-10`, title: `Monthly Bookkeeping (${monthName})`, taskType: 'Bookkeeping', service: 'Accounting', priority: 'medium', description: `Complete bookkeeping for ${monthName} ${year}` },
+        );
+    }
+    for (let m = 1; m <= 3; m++) {
+        const year = endYear;
+        const month = String(m).padStart(2, '0');
+        const monthName = new Date(year, m - 1, 1).toLocaleString('en-IN', { month: 'long' });
+        deadlines.push(
+            { date: `${year}-${month}-10`, title: `Monthly Bookkeeping (${monthName})`, taskType: 'Bookkeeping', service: 'Accounting', priority: 'medium', description: `Complete bookkeeping for ${monthName} ${year}` },
+        );
+    }
 
     return deadlines.map(d => ({ ...d, fiscalYear }));
 }

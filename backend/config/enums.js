@@ -31,12 +31,14 @@ module.exports = {
 
   USER_ROLES: ['partner', 'seniorCA', 'article', 'client'],
 
-  // Mapping from task types to filing types
+  // Simple mapping from task types to filing types (used for manual task → filing lookups)
+  // For auto-generated tasks, complianceController.getFilingInfo() provides smarter title-based mapping
   TASK_TO_FILING_MAP: {
     'ITR Filing': 'ITR',
     'GST Filing': 'GSTR-1',
     'TDS Return': 'TDS',
     'Audit': 'Tax Audit',
     'ROC Filing': 'ROC-MGT7',
+    'Tax Planning': 'Advance Tax',
   },
 };

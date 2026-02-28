@@ -63,5 +63,7 @@ const taskSchema = new mongoose.Schema({
 taskSchema.index({ client: 1, status: 1 });
 taskSchema.index({ assignedTo: 1, status: 1 });
 taskSchema.index({ dueDate: 1 });
+// Prevent duplicate auto-generated tasks (same client + title + fiscal year)
+taskSchema.index({ client: 1, title: 1, fiscalYear: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Task', taskSchema);

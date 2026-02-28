@@ -1,8 +1,28 @@
 const Client = require('../models/Client');
 const Task = require('../models/Task');
+const Filing = require('../models/Filing');
+const ActivityLog = require('../models/ActivityLog');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { getDeadlinesForYear, getCurrentFiscalYear, DOCUMENT_CHECKLISTS } = require('../lib/complianceDeadlines');
+
+// Map task title/type to Filing filingType and period
+function getFilingInfo(deadline) {
+    const title = deadline.title;
+    if (title.startsWith('GSTR-1 IFF')) return { filingType: 'GSTR-1', period: title.match(/\((.+)\)/)?.[1] || 'Monthly' };
+    if (title.startsWith('GSTR-1')) return { filingType: 'GSTR-1', period: title.match(/\((.+)\)/)?.[1] || 'Monthly' };
+    if (title.startsWith('GSTR-3B')) return { filingType: 'GSTR-3B', period: title.match(/\((.+)\)/)?.[1] || 'Monthly' };
+    if (title.startsWith('GSTR-9C')) return { filingType: 'GSTR-9', period: 'Annual (Reconciliation)' };
+    if (title.startsWith('GSTR-9')) return { filingType: 'GSTR-9', period: 'Annual' };
+    if (title.startsWith('ITR Filing')) return { filingType: 'ITR', period: 'Annual' };
+    if (title.startsWith('TDS Deposit')) return { filingType: 'TDS', period: title.match(/\((.+)\)/)?.[1] || 'Monthly' };
+    if (title.startsWith('TDS Return')) return { filingType: 'TDS', period: title.match(/Q(\d)/)?.[0] || 'Quarterly' };
+    if (title.startsWith('Tax Audit')) return { filingType: 'Tax Audit', period: 'Annual' };
+    if (title.includes('MGT-7')) return { filingType: 'ROC-MGT7', period: 'Annual' };
+    if (title.includes('AOC-4')) return { filingType: 'ROC-AOC4', period: 'Annual' };
+    if (title.startsWith('Advance Tax')) return { filingType: 'Advance Tax', period: title.match(/(\d)\w+ Installment/)?.[0] || 'Quarterly' };
+    return null; // No filing for bookkeeping, tax planning, etc.
+}
 
 // Get compliance calendar for a fiscal year
 exports.getCalendar = async (req, res) => {
@@ -24,14 +44,21 @@ exports.generateTasks = async (req, res) => {
     try {
         const fiscalYear = req.body.fiscalYear || getCurrentFiscalYear();
         const { month } = req.body; // optional: only generate for a specific month
-        const deadlines = getDeadlinesForYear(fiscalYear);
 
-        const clients = await Client.find({});
-        const createdTasks = [];
-        let skipped = 0;
+        // Fix #6: Validate fiscal year format (e.g., "2024-2025")
+        const fyMatch = fiscalYear.match(/^(\d{4})-(\d{4})$/);
+        if (!fyMatch || parseInt(fyMatch[2]) !== parseInt(fyMatch[1]) + 1) {
+            return res.status(400).json({ message: 'Invalid fiscal year format. Expected: YYYY-YYYY (e.g., 2024-2025)' });
+        }
+
+        const deadlines = getDeadlinesForYear(fiscalYear);
+        const clients = await Client.find({}).populate('assignedTo', '_id username');
+
+        const summary = { created: 0, skipped: 0, errors: 0, filingsCreated: 0, clients: [] };
 
         for (const client of clients) {
             const clientServices = client.services || [];
+            const clientSummary = { clientId: client._id, clientName: client.name, tasksCreated: 0, tasksSkipped: 0, errors: [] };
 
             for (const deadline of deadlines) {
                 // Only create tasks for deadlines matching client's services
@@ -43,37 +70,114 @@ exports.generateTasks = async (req, res) => {
                     if (deadlineMonth !== parseInt(month)) continue;
                 }
 
-                // Check if task already exists for this client + deadline
-                const existing = await Task.findOne({
-                    client: client._id,
-                    title: deadline.title,
-                    fiscalYear,
-                });
-                if (existing) {
-                    skipped++;
-                    continue;
+                // Fix #5: Per-task error handling
+                try {
+                    // Check if task already exists (application-level check before DB unique constraint)
+                    const existing = await Task.findOne({
+                        client: client._id,
+                        title: deadline.title,
+                        fiscalYear,
+                    });
+                    if (existing) {
+                        clientSummary.tasksSkipped++;
+                        summary.skipped++;
+                        continue;
+                    }
+
+                    // Fix #2: Auto-assign to first article in client's assignedTo
+                    const assignee = client.assignedTo && client.assignedTo.length > 0
+                        ? client.assignedTo[0]._id || client.assignedTo[0]
+                        : undefined;
+
+                    const task = await Task.create({
+                        title: deadline.title,
+                        description: deadline.description,
+                        client: client._id,
+                        taskType: deadline.taskType,
+                        priority: deadline.priority,
+                        dueDate: new Date(deadline.date),
+                        fiscalYear,
+                        assignedTo: assignee,
+                        createdBy: req.user.id,
+                        status: 'pending',
+                    });
+
+                    clientSummary.tasksCreated++;
+                    summary.created++;
+
+                    // Fix #1: Create linked Filing record if applicable
+                    const filingInfo = getFilingInfo(deadline);
+                    if (filingInfo) {
+                        try {
+                            await Filing.create({
+                                client: client._id,
+                                filingType: filingInfo.filingType,
+                                period: filingInfo.period,
+                                fiscalYear,
+                                status: 'not_started',
+                                dueDate: new Date(deadline.date),
+                                task: task._id,
+                                createdBy: req.user.id,
+                            });
+                            summary.filingsCreated++;
+                        } catch (filingErr) {
+                            // Filing may already exist (unique constraint) — not a critical error
+                            if (filingErr.code !== 11000) {
+                                console.error(`Filing creation error for ${client.name} - ${deadline.title}:`, filingErr.message);
+                            }
+                        }
+                    }
+
+                    // Notify assigned article
+                    if (assignee) {
+                        try {
+                            await Notification.create({
+                                recipient: assignee,
+                                type: 'task:assigned',
+                                title: 'New Task Assigned',
+                                message: `Auto-generated: ${deadline.title} for ${client.name}`,
+                                link: `/clients/${client._id}`,
+                            });
+                        } catch (notifErr) {
+                            // Non-critical
+                        }
+                    }
+                } catch (taskErr) {
+                    // Fix #5: Skip this task but continue with others
+                    if (taskErr.code === 11000) {
+                        // Duplicate key — task already exists (DB constraint caught it)
+                        clientSummary.tasksSkipped++;
+                        summary.skipped++;
+                    } else {
+                        clientSummary.errors.push(`${deadline.title}: ${taskErr.message}`);
+                        summary.errors++;
+                        console.error(`Task creation error for ${client.name} - ${deadline.title}:`, taskErr.message);
+                    }
                 }
+            }
 
-                const task = await Task.create({
-                    title: deadline.title,
-                    description: deadline.description,
-                    client: client._id,
-                    taskType: deadline.taskType,
-                    priority: deadline.priority,
-                    dueDate: new Date(deadline.date),
-                    fiscalYear,
-                    createdBy: req.user.id,
-                    status: 'pending',
-                });
-
-                createdTasks.push(task);
+            // Fix #7: Only include clients that had relevant services
+            if (clientSummary.tasksCreated > 0 || clientSummary.tasksSkipped > 0 || clientSummary.errors.length > 0) {
+                summary.clients.push(clientSummary);
             }
         }
 
+        // Fix #8: Activity log for bulk generation
+        try {
+            await ActivityLog.create({
+                action: 'task:bulk_generate',
+                performedBy: req.user.id,
+                targetType: 'Task',
+                details: `Auto-generated ${summary.created} tasks for FY ${fiscalYear}${month ? ` (month ${month})` : ''} — ${summary.skipped} skipped, ${summary.errors} errors, ${summary.filingsCreated} filings created`,
+                metadata: { fiscalYear, month, created: summary.created, skipped: summary.skipped, errors: summary.errors },
+            });
+        } catch (logErr) {
+            console.error('Activity log error:', logErr.message);
+        }
+
         res.json({
-            message: `Generated ${createdTasks.length} tasks (${skipped} already existed)`,
-            created: createdTasks.length,
-            skipped,
+            message: `Generated ${summary.created} tasks and ${summary.filingsCreated} filings (${summary.skipped} duplicates skipped, ${summary.errors} errors)`,
+            ...summary,
         });
     } catch (error) {
         console.error('Error generating tasks:', error);

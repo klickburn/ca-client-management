@@ -78,6 +78,12 @@ const getTasks = async (req, res) => {
             filter.assignedTo = assignedTo;
         }
 
+        // Auto-mark overdue tasks (pending/in_progress + past due date)
+        await Task.updateMany(
+            { status: { $in: ['pending', 'in_progress'] }, dueDate: { $lt: new Date() } },
+            { $set: { status: 'overdue' } }
+        );
+
         const tasks = await Task.find(filter)
             .populate('client', 'name')
             .populate('assignedTo', 'username')
