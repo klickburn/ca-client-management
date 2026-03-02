@@ -7,19 +7,7 @@ const connectDB = async () => {
         
         console.log('Attempting to connect to MongoDB...');
         
-        // Add required options to prevent deprecation warnings
-        const options = {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        };
-        
-        // Conditionally add deprecated options for older MongoDB versions if not in production
-        if (process.env.NODE_ENV !== 'production') {
-            options.useCreateIndex = true;
-            options.useFindAndModify = false;
-        }
-        
-        await mongoose.connect(uri, options);
+        await mongoose.connect(uri);
         console.log('MongoDB connected successfully');
     } catch (error) {
         console.error('MongoDB connection failed. Details:', error);
