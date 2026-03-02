@@ -14,7 +14,7 @@ exports.getMessages = async (req, res) => {
       .limit(100);
     res.json(messages);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching messages', error: error.message });
+    res.status(500).json({ message: 'Error fetching messages' });
   }
 };
 
@@ -69,7 +69,7 @@ exports.sendMessage = async (req, res) => {
 
     res.status(201).json(message);
   } catch (error) {
-    res.status(500).json({ message: 'Error sending message', error: error.message });
+    res.status(500).json({ message: 'Error sending message' });
   }
 };
 
@@ -83,7 +83,7 @@ exports.getUnreadCount = async (req, res) => {
     });
     res.json({ count });
   } catch (error) {
-    res.status(500).json({ message: 'Error getting unread count', error: error.message });
+    res.status(500).json({ message: 'Error getting unread count' });
   }
 };
 
@@ -97,6 +97,6 @@ exports.markRead = async (req, res) => {
     );
     res.json({ message: 'Messages marked as read' });
   } catch (error) {
-    res.status(500).json({ message: 'Error marking messages read', error: error.message });
+    res.status(500).json({ message: 'Error marking messages read' });
   }
 };

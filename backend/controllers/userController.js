@@ -25,6 +25,14 @@ exports.createUser = async (req, res) => {
             return res.status(400).json({ message: 'Client users require a linked clientId' });
         }
 
+        // Validate password strength (same rules as changePassword)
+        if (!password || password.length < 8) {
+            return res.status(400).json({ message: 'Password must be at least 8 characters' });
+        }
+        if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+            return res.status(400).json({ message: 'Password must contain uppercase, lowercase, and a number' });
+        }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -51,20 +59,42 @@ exports.createUser = async (req, res) => {
 
         res.status(201).json({ message: 'User created successfully', user: userResponse });
     } catch (error) {
-        res.status(500).json({ message: 'Error creating user', error: error.message });
+        res.status(500).json({ message: 'Error creating user' });
     }
 };
 
-// Get all users
+// Get all users (with task counts)
 exports.getAllUsers = async (req, res) => {
     try {
         const users = await User.find()
             .select('-password')
             .populate('supervisorId', 'username role')
-            .populate('clientId', 'name email');
-        res.status(200).json(users);
+            .populate('clientId', 'name email')
+            .lean();
+
+        // Get task counts per user in one aggregation
+        const taskCounts = await Task.aggregate([
+            { $match: { assignedTo: { $ne: null } } },
+            { $group: {
+                _id: '$assignedTo',
+                total: { $sum: 1 },
+                open: { $sum: { $cond: [{ $nin: ['$status', ['completed']] }, 1, 0] } },
+                completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+                overdue: { $sum: { $cond: [{ $and: [{ $ne: ['$status', 'completed'] }, { $lt: ['$dueDate', new Date()] }] }, 1, 0] } },
+            }},
+        ]);
+
+        const countMap = {};
+        taskCounts.forEach(tc => { countMap[tc._id.toString()] = tc; });
+
+        const usersWithStats = users.map(u => ({
+            ...u,
+            taskStats: countMap[u._id.toString()] || { total: 0, open: 0, completed: 0, overdue: 0 },
+        }));
+
+        res.status(200).json(usersWithStats);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching users', error: error.message });
+        res.status(500).json({ message: 'Error fetching users' });
     }
 };
 
@@ -85,7 +115,7 @@ exports.assignRole = async (req, res) => {
         }
         res.status(200).json({ message: 'Role assigned successfully', user });
     } catch (error) {
-        res.status(500).json({ message: 'Error assigning role', error: error.message });
+        res.status(500).json({ message: 'Error assigning role' });
     }
 };
 
@@ -102,7 +132,7 @@ exports.deleteUser = async (req, res) => {
         await User.updateMany({ supervisorId: user._id }, { $unset: { supervisorId: '' } });
         res.status(200).json({ message: 'User deleted successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Error deleting user', error: error.message });
+        res.status(500).json({ message: 'Error deleting user' });
     }
 };
 
@@ -131,7 +161,7 @@ exports.changePassword = async (req, res) => {
 
         res.json({ message: 'Password changed successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Error changing password', error: error.message });
+        res.status(500).json({ message: 'Error changing password' });
     }
 };
 

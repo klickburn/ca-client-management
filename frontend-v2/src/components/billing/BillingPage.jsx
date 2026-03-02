@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { invoiceService } from '@/services/invoiceService';
 import { clientService } from '@/services/clientService';
 import { usePermission } from '@/hooks/usePermission';
@@ -13,6 +14,8 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { StatsSkeleton, TableSkeleton } from '@/components/ui/skeleton';
 import { Plus, IndianRupee, Trash2, CreditCard } from 'lucide-react';
 
 const statusConfig = {
@@ -35,6 +38,7 @@ export default function BillingPage() {
   const [paymentDialog, setPaymentDialog] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [deleteInvoiceId, setDeleteInvoiceId] = useState(null);
   const [form, setForm] = useState({
     client: '', dueDate: '', notes: '',
     items: [{ description: '', amount: '' }],
@@ -66,9 +70,10 @@ export default function BillingPage() {
       await invoiceService.createInvoice({ ...form, items });
       setDialogOpen(false);
       setForm({ client: '', dueDate: '', notes: '', items: [{ description: '', amount: '' }] });
+      toast.success('Invoice created');
       fetchData();
     } catch (error) {
-      console.error('Error creating invoice:', error);
+      toast.error('Failed to create invoice');
     }
   };
 
@@ -86,35 +91,43 @@ export default function BillingPage() {
       await invoiceService.recordPayment(paymentDialog, Number(paymentAmount));
       setPaymentDialog(null);
       setPaymentAmount('');
+      toast.success('Payment recorded');
       fetchData();
     } catch (error) {
-      console.error('Error recording payment:', error);
+      toast.error('Failed to record payment');
     }
   };
 
   const handleStatusChange = async (id, status) => {
     try {
       await invoiceService.updateInvoice(id, { status });
+      toast.success('Status updated');
       fetchData();
     } catch (error) {
-      console.error('Error updating invoice:', error);
+      toast.error('Failed to update status');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this invoice?')) return;
     try {
       await invoiceService.deleteInvoice(id);
+      toast.success('Invoice deleted');
       fetchData();
     } catch (error) {
-      console.error('Error deleting invoice:', error);
+      toast.error('Failed to delete invoice');
     }
   };
 
   const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
   const totalFormAmount = form.items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
 
-  if (loading) return <div className="text-muted-foreground">Loading invoices...</div>;
+  if (loading) return (
+    <div className="space-y-6">
+      <div className="h-7 w-24 bg-muted animate-pulse rounded" />
+      <StatsSkeleton count={4} />
+      <TableSkeleton rows={5} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -255,7 +268,7 @@ export default function BillingPage() {
                         </>
                       )}
                       {canDelete && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100" onClick={() => handleDelete(inv._id)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100" onClick={() => setDeleteInvoiceId(inv._id)}>
                           <Trash2 size={14} />
                         </Button>
                       )}
@@ -281,6 +294,15 @@ export default function BillingPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteInvoiceId}
+        onOpenChange={(v) => !v && setDeleteInvoiceId(null)}
+        title="Delete invoice"
+        description="This action cannot be undone. Are you sure?"
+        confirmLabel="Delete"
+        onConfirm={() => handleDelete(deleteInvoiceId)}
+      />
     </div>
   );
 }

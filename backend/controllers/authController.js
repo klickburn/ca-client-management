@@ -8,18 +8,16 @@ const ActivityLog = require('../models/ActivityLog');
 exports.login = async (req, res) => {
     const { username, password } = req.body;
 
-    console.log(`Login attempt: Username: ${username}`);
-
     try {
         const user = await User.findOne({ username });
         if (!user) {
-            console.log(`Login failed: User '${username}' not found`);
+            console.log('Login failed: user not found');
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            console.log(`Login failed: Invalid password for user '${username}'`);
+            console.log(`Login failed: invalid password for user ${user._id}`);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
@@ -41,7 +39,7 @@ exports.login = async (req, res) => {
             expiresIn: TOKEN_EXPIRATION,
         });
 
-        console.log(`Login successful: User ${username} (${user._id}) role=${user.role}`);
+        console.log(`Login successful: ${user._id} role=${user.role}`);
         try { await ActivityLog.create({ action: 'login', performedBy: user._id, details: `${username} logged in` }); } catch (e) {}
 
         res.json({

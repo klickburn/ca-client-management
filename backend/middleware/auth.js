@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/auth');
+const User = require('../models/User');
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
     // Only accept token from Authorization header
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
@@ -11,10 +12,17 @@ const authMiddleware = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+
+        // Verify user still exists (handles deleted users with valid tokens)
+        const userExists = await User.exists({ _id: decoded.id });
+        if (!userExists) {
+            return res.status(401).json({ message: 'User no longer exists.' });
+        }
+
         req.user = decoded;
         next();
     } catch (error) {
-        res.status(400).json({ message: 'Invalid token.' });
+        res.status(401).json({ message: 'Invalid token.' });
     }
 };
 

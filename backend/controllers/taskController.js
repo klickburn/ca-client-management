@@ -92,7 +92,7 @@ const getTasks = async (req, res) => {
 
         res.json(tasks);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -147,7 +147,7 @@ const deleteTask = async (req, res) => {
         await Task.findByIdAndDelete(req.params.id);
         res.json({ message: 'Task deleted' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -181,7 +181,7 @@ const getTaskStats = async (req, res) => {
 
         res.json({ pending, in_progress, review, completed, overdue, dueSoon });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -239,8 +239,32 @@ const bulkDeleteTasks = async (req, res) => {
         await logActivity('task:delete', req.user.id, null, `Bulk deleted ${result.deletedCount} tasks`);
         res.json({ message: `Deleted ${result.deletedCount} tasks`, deletedCount: result.deletedCount });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
-module.exports = { createTask, getTasks, updateTask, updateChecklist, deleteTask, bulkDeleteTasks, getTaskStats };
+// Bulk update task status
+const bulkUpdateTasks = async (req, res) => {
+    try {
+        const { ids, status } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: 'ids array is required' });
+        }
+        if (!status) {
+            return res.status(400).json({ message: 'status is required' });
+        }
+
+        const updateData = { status };
+        if (status === 'completed') {
+            updateData.completedAt = new Date();
+        }
+
+        const result = await Task.updateMany({ _id: { $in: ids } }, { $set: updateData });
+        await logActivity('task:update', req.user.id, null, `Bulk updated ${result.modifiedCount} tasks to ${status}`);
+        res.json({ message: `Updated ${result.modifiedCount} tasks`, modifiedCount: result.modifiedCount });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { createTask, getTasks, updateTask, updateChecklist, deleteTask, bulkDeleteTasks, bulkUpdateTasks, getTaskStats };

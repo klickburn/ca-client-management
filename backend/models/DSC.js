@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { encrypt, decrypt } = require('../lib/fieldEncryption');
 
 const dscSchema = new mongoose.Schema({
     client: {
@@ -52,5 +53,20 @@ const dscSchema = new mongoose.Schema({
 // Index for quick lookups
 dscSchema.index({ client: 1 });
 dscSchema.index({ expiryDate: 1 });
+
+// Encrypt password before saving
+dscSchema.pre('save', function (next) {
+    if (this.password && !this.password.startsWith('enc:')) {
+        this.password = encrypt(this.password);
+    }
+    next();
+});
+
+// Decrypt password in JSON output
+dscSchema.methods.toJSON = function () {
+    const obj = this.toObject();
+    if (obj.password) obj.password = decrypt(obj.password);
+    return obj;
+};
 
 module.exports = mongoose.model('DSC', dscSchema);

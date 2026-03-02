@@ -27,10 +27,8 @@ export default function DocumentChecklist({ taskType, clientId, taskId }) {
   }, [taskType, clientId]);
 
   const isCollected = (itemName) => {
-    // Check task-level manual toggle first
     const taskItem = taskChecklist.find(i => i.name === itemName);
     if (taskItem) return taskItem.collected;
-    // Fall back to auto-detected uploaded document
     const checklistItem = checklist?.items?.find(i => i.name === itemName);
     return checklistItem?.uploaded || false;
   };
@@ -47,9 +45,20 @@ export default function DocumentChecklist({ taskType, clientId, taskId }) {
   };
 
   if (loading) return <p className="text-xs text-muted-foreground">Loading checklist...</p>;
-  if (!checklist || checklist.items?.length === 0) return null;
+
+  if (!checklist || checklist.items?.length === 0) {
+    return (
+      <div className="mt-2 p-3 rounded-lg bg-muted/30">
+        <p className="text-xs text-muted-foreground">No document checklist defined for this task type.</p>
+      </div>
+    );
+  }
 
   const collectedCount = checklist.items.filter(item => isCollected(item.name)).length;
+  const requiredItems = checklist.items.filter(item => item.required);
+  const requiredCollectedCount = requiredItems.filter(item => isCollected(item.name)).length;
+  const optionalItems = checklist.items.filter(item => !item.required);
+  const optionalCollectedCount = optionalItems.filter(item => isCollected(item.name)).length;
 
   return (
     <div className="mt-2 p-3 rounded-lg bg-muted/30">
@@ -58,6 +67,11 @@ export default function DocumentChecklist({ taskType, clientId, taskId }) {
         <span className="text-xs font-medium text-white">
           Document Checklist — {collectedCount}/{checklist.total} collected
         </span>
+        {requiredItems.length > 0 && (
+          <span className={`text-[10px] ${requiredCollectedCount === requiredItems.length ? 'text-green-500' : 'text-red-400'}`}>
+            ({requiredCollectedCount}/{requiredItems.length} required)
+          </span>
+        )}
         <div className="flex-1 bg-muted rounded-full h-1.5 ml-2">
           <div
             className="bg-primary h-1.5 rounded-full transition-all"

@@ -55,13 +55,21 @@ const getInvoices = async (req, res) => {
         if (status && status !== 'all') filter.status = status;
         if (clientId) filter.client = clientId;
 
-        // Client role can only see their own invoices
+        // Scope invoices by role
+        const User = require('../models/User');
         const { role } = req.user;
         if (role === 'client') {
-            const User = require('../models/User');
             const user = await User.findById(req.user.id).select('clientId');
             if (user?.clientId) filter.client = user.clientId;
             else return res.json([]);
+        } else if (role === 'article') {
+            // Article users can only see invoices for their assigned clients
+            const user = await User.findById(req.user.id).select('assignedClients');
+            if (user?.assignedClients?.length) {
+                filter.client = { $in: user.assignedClients };
+            } else {
+                return res.json([]);
+            }
         }
 
         // Auto-mark overdue invoices (sent + past due date)
@@ -77,7 +85,7 @@ const getInvoices = async (req, res) => {
 
         res.json(invoices);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -91,7 +99,7 @@ const getInvoice = async (req, res) => {
         if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
         res.json(invoice);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -127,6 +135,9 @@ const recordPayment = async (req, res) => {
         if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
 
         const { amount } = req.body;
+        if (!amount || !Number.isFinite(amount) || amount <= 0) {
+            return res.status(400).json({ message: 'Valid positive payment amount is required' });
+        }
         invoice.paidAmount = (invoice.paidAmount || 0) + amount;
         if (invoice.paidAmount >= invoice.totalAmount) {
             invoice.status = 'paid';
@@ -157,7 +168,7 @@ const deleteInvoice = async (req, res) => {
         await Invoice.findByIdAndDelete(req.params.id);
         res.json({ message: 'Invoice deleted' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -167,11 +178,18 @@ const getInvoiceStats = async (req, res) => {
         const filter = {};
         const { role } = req.user;
 
+        const User = require('../models/User');
         if (role === 'client') {
-            const User = require('../models/User');
             const user = await User.findById(req.user.id).select('clientId');
             if (user?.clientId) filter.client = user.clientId;
             else return res.json({ total: 0, paid: 0, pending: 0, overdue: 0, totalRevenue: 0, pendingRevenue: 0 });
+        } else if (role === 'article') {
+            const user = await User.findById(req.user.id).select('assignedClients');
+            if (user?.assignedClients?.length) {
+                filter.client = { $in: user.assignedClients };
+            } else {
+                return res.json({ total: 0, paid: 0, pending: 0, overdue: 0, totalRevenue: 0, pendingRevenue: 0 });
+            }
         }
 
         const invoices = await Invoice.find(filter);
@@ -187,7 +205,7 @@ const getInvoiceStats = async (req, res) => {
 
         res.json(stats);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 

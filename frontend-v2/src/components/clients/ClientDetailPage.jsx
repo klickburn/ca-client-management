@@ -11,6 +11,7 @@ import DocumentManager from '@/components/documents/DocumentManager';
 import FilingTracker from '@/components/clients/FilingTracker';
 import Messages from '@/components/portal/Messages';
 import DocRequestManager from '@/components/clients/DocRequestManager';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Key, Copy, Check, User } from 'lucide-react';
 
 function InfoRow({ label, value }) {
@@ -64,6 +65,7 @@ export default function ClientDetailPage() {
   const [resetCreds, setResetCreds] = useState(null);
   const [copied, setCopied] = useState('');
   const [resetting, setResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     const fetchClient = async () => {
@@ -84,7 +86,6 @@ export default function ClientDetailPage() {
   }, [id]);
 
   const handleResetPassword = async () => {
-    if (!confirm('Reset this client\'s portal password? The old password will no longer work.')) return;
     setResetting(true);
     try {
       const result = await clientService.resetPortalPassword(id);
@@ -204,7 +205,7 @@ export default function ClientDetailPage() {
                       ) : (
                         <div className="flex items-center justify-between py-2">
                           <span className="text-sm text-muted-foreground">Password</span>
-                          <Button variant="outline" size="sm" onClick={handleResetPassword} disabled={resetting} className="text-xs">
+                          <Button variant="outline" size="sm" onClick={() => setShowResetConfirm(true)} disabled={resetting} className="text-xs">
                             <Key size={13} className="mr-1" />
                             {resetting ? 'Resetting...' : 'Reset Password'}
                           </Button>
@@ -342,6 +343,16 @@ export default function ClientDetailPage() {
           <Messages clientId={id} />
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={showResetConfirm}
+        onOpenChange={setShowResetConfirm}
+        title="Reset portal password"
+        description="The old password will no longer work. Are you sure?"
+        confirmLabel="Reset Password"
+        variant="destructive"
+        onConfirm={handleResetPassword}
+      />
     </div>
   );
 }

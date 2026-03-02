@@ -2,12 +2,13 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const { checkPermission } = require('../middleware/permissions');
-const { createTask, getTasks, updateTask, updateChecklist, deleteTask, bulkDeleteTasks, getTaskStats } = require('../controllers/taskController');
+const { createTask, getTasks, updateTask, updateChecklist, deleteTask, bulkDeleteTasks, bulkUpdateTasks, getTaskStats } = require('../controllers/taskController');
 
 router.use(authMiddleware);
 
 router.get('/stats', getTaskStats);
 router.post('/bulk-delete', checkPermission('task:delete'), bulkDeleteTasks);
+router.post('/bulk-update', bulkUpdateTasks);
 router.get('/', getTasks);
 router.post('/', checkPermission('task:create'), createTask);
 router.put('/:id/checklist', updateChecklist);

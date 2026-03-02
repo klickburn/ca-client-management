@@ -39,7 +39,7 @@ exports.getDSCs = async (req, res) => {
 
         res.json(dscs);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -58,7 +58,7 @@ exports.getDSCStats = async (req, res) => {
 
         res.json({ total, active, expired, expiringSoon });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -94,6 +94,6 @@ exports.deleteDSC = async (req, res) => {
         await logActivity('client:update', req.user.id, dsc.client, `Removed DSC record`);
         res.json({ message: 'DSC deleted' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };

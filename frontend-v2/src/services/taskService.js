@@ -39,4 +39,14 @@ export const taskService = {
     const response = await api.put(`/tasks/${taskId}/checklist`, { itemName, collected, note });
     return response.data;
   },
+
+  async bulkUpdateTasks(ids, status) {
+    const response = await api.post('/tasks/bulk-update', { ids, status });
+    return response.data;
+  },
+
+  async getEnums() {
+    const response = await api.get('/enums');
+    return response.data;
+  },
 };

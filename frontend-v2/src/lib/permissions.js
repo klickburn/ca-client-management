@@ -24,6 +24,7 @@ export const PERMISSIONS = {
   'billing:edit':        ['partner', 'seniorCA'],
   'billing:delete':      ['partner'],
   'activity:view':       ['partner', 'seniorCA'],
+  'reports:view':        ['partner', 'seniorCA'],
 };
 
 export const CREATION_HIERARCHY = {

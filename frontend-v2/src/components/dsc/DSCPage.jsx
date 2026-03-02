@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { dscService } from '@/services/dscService';
 import { clientService } from '@/services/clientService';
 import { usePermission } from '@/hooks/usePermission';
@@ -10,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { KeyRound, Plus, Trash2, AlertTriangle, CheckCircle2, Clock, Shield } from 'lucide-react';
 
 const PROVIDERS = ['eMudhra', 'Sify', 'nCode', 'Capricorn', 'NSDL', 'Other'];
@@ -28,6 +30,7 @@ export default function DSCPage() {
   });
   const canEdit = usePermission('client:edit');
   const canDelete = usePermission('client:delete');
+  const [deleteId, setDeleteId] = useState(null);
 
   useEffect(() => { fetchData(); }, [filter]);
 
@@ -58,19 +61,20 @@ export default function DSCPage() {
       await dscService.createDSC(form);
       setShowForm(false);
       setForm({ client: '', holderName: '', classType: 'Class 2', provider: '', serialNumber: '', issuedDate: '', expiryDate: '', password: '', purpose: 'General', notes: '' });
+      toast.success('DSC record created');
       fetchData();
     } catch (error) {
-      console.error('Error creating DSC:', error);
+      toast.error('Failed to create DSC record');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this DSC record?')) return;
     try {
       await dscService.deleteDSC(id);
+      toast.success('DSC record deleted');
       fetchData();
     } catch (error) {
-      console.error('Error deleting DSC:', error);
+      toast.error('Failed to delete DSC record');
     }
   };
 
@@ -231,7 +235,7 @@ export default function DSCPage() {
                     </div>
                   </div>
                   {canDelete && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(dsc._id)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(dsc._id)}>
                       <Trash2 size={14} />
                     </Button>
                   )}
@@ -241,6 +245,15 @@ export default function DSCPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(v) => !v && setDeleteId(null)}
+        title="Delete DSC record"
+        description="This action cannot be undone. Are you sure?"
+        confirmLabel="Delete"
+        onConfirm={() => handleDelete(deleteId)}
+      />
     </div>
   );
 }

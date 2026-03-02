@@ -15,7 +15,7 @@ exports.getRequestsByClient = async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(requests);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching requests', error: error.message });
+    res.status(500).json({ message: 'Error fetching requests' });
   }
 };
 
@@ -40,7 +40,7 @@ exports.createRequest = async (req, res) => {
 
     res.status(201).json(request);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating request', error: error.message });
+    res.status(500).json({ message: 'Error creating request' });
   }
 };
 
@@ -51,7 +51,7 @@ exports.updateRequest = async (req, res) => {
     if (!request) return res.status(404).json({ message: 'Request not found' });
     res.json(request);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating request', error: error.message });
+    res.status(500).json({ message: 'Error updating request' });
   }
 };
 
@@ -62,7 +62,7 @@ exports.deleteRequest = async (req, res) => {
     if (!request) return res.status(404).json({ message: 'Request not found' });
     res.json({ message: 'Request deleted' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting request', error: error.message });
+    res.status(500).json({ message: 'Error deleting request' });
   }
 };
 
@@ -97,6 +97,6 @@ exports.fulfillItem = async (req, res) => {
     await request.save();
     res.json(request);
   } catch (error) {
-    res.status(500).json({ message: 'Error fulfilling item', error: error.message });
+    res.status(500).json({ message: 'Error fulfilling item' });
   }
 };

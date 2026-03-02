@@ -13,6 +13,31 @@ const logActivity = async (action, userId, targetId, details) => {
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { r2Client, R2_BUCKET } = require('../config/r2');
 
+// Allowed MIME types for document uploads
+const ALLOWED_CONTENT_TYPES = new Set([
+    'application/pdf',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/tiff',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain', 'text/csv',
+    'application/zip', 'application/x-zip-compressed',
+]);
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
+// Sanitize filename: remove path traversal and special characters
+const sanitizeFilename = (name) => name.replace(/[^a-zA-Z0-9._\- ]/g, '_').replace(/\.{2,}/g, '.');
+
+// Verify user has access to the given client based on filterClientAccess middleware
+const verifyClientAccess = (req, clientId) => {
+    if (!req.clientFilter) return true; // No filter = unrestricted (partner/seniorCA)
+    if (!req.clientFilter._id) return true;
+    const allowedIds = req.clientFilter._id.$in || [req.clientFilter._id];
+    return allowedIds.some(id => id.toString() === clientId.toString());
+};
+
 // Get a presigned upload URL
 exports.getUploadUrl = async (req, res) => {
     try {
@@ -23,21 +48,31 @@ exports.getUploadUrl = async (req, res) => {
             return res.status(400).json({ message: 'filename and contentType are required' });
         }
 
+        // Validate content type
+        if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+            return res.status(400).json({ message: 'File type not allowed. Accepted: PDF, images, Word, Excel, CSV, TXT, ZIP' });
+        }
+
         const client = await Client.findById(clientId);
         if (!client) {
             return res.status(404).json({ message: 'Client not found' });
         }
+        if (!verifyClientAccess(req, clientId)) {
+            return res.status(403).json({ message: 'Access denied to this client' });
+        }
 
-        // Build R2 key: /{clientId}/{fiscalYear}/{category}/{timestamp}-{filename}
+        // Build R2 key: /{clientId}/{fiscalYear}/{category}/{timestamp}-{sanitizedFilename}
         const year = fiscalYear || 'unclassified';
         const cat = category || 'Other';
-        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${filename}`;
+        const safeName = sanitizeFilename(filename);
+        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safeName}`;
         const r2Key = `${clientId}/${year}/${cat}/${uniqueName}`;
 
         const command = new PutObjectCommand({
             Bucket: R2_BUCKET,
             Key: r2Key,
             ContentType: contentType,
+            ContentLength: MAX_FILE_SIZE, // Server-side size limit hint
         });
 
         const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 600 }); // 10 min
@@ -69,7 +104,7 @@ exports.getUploadUrl = async (req, res) => {
         });
     } catch (error) {
         console.error('Error generating upload URL:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -83,6 +118,9 @@ exports.confirmUpload = async (req, res) => {
         if (!client) {
             return res.status(404).json({ message: 'Client not found' });
         }
+        if (!verifyClientAccess(req, clientId)) {
+            return res.status(403).json({ message: 'Access denied to this client' });
+        }
 
         const document = client.documents.id(documentId);
         if (!document) {
@@ -90,6 +128,9 @@ exports.confirmUpload = async (req, res) => {
         }
 
         if (size) {
+            if (size > MAX_FILE_SIZE) {
+                return res.status(400).json({ message: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` });
+            }
             document.size = size;
         }
 
@@ -118,7 +159,7 @@ exports.confirmUpload = async (req, res) => {
         res.status(200).json({ message: 'Upload confirmed', document });
     } catch (error) {
         console.error('Error confirming upload:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -132,6 +173,9 @@ exports.getDocuments = async (req, res) => {
 
         if (!client) {
             return res.status(404).json({ message: 'Client not found' });
+        }
+        if (!verifyClientAccess(req, clientId)) {
+            return res.status(403).json({ message: 'Access denied to this client' });
         }
 
         let documents = client.documents;
@@ -147,7 +191,7 @@ exports.getDocuments = async (req, res) => {
         res.status(200).json(documents);
     } catch (error) {
         console.error('Error getting documents:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -159,6 +203,9 @@ exports.getDownloadUrl = async (req, res) => {
 
         if (!client) {
             return res.status(404).json({ message: 'Client not found' });
+        }
+        if (!verifyClientAccess(req, clientId)) {
+            return res.status(403).json({ message: 'Access denied to this client' });
         }
 
         const document = client.documents.id(documentId);
@@ -179,7 +226,7 @@ exports.getDownloadUrl = async (req, res) => {
         res.status(200).json({ downloadUrl, document });
     } catch (error) {
         console.error('Error generating download URL:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -248,7 +295,7 @@ exports.verifyDocument = async (req, res) => {
         res.status(200).json({ message: 'Document verified', document });
     } catch (error) {
         console.error('Error verifying document:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -295,7 +342,7 @@ exports.rejectDocument = async (req, res) => {
         res.status(200).json({ message: 'Document rejected', document });
     } catch (error) {
         console.error('Error rejecting document:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -334,7 +381,7 @@ exports.deleteDocument = async (req, res) => {
         res.status(200).json({ message: 'Document deleted successfully' });
     } catch (error) {
         console.error('Error deleting document:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -368,6 +415,6 @@ exports.getPendingDocuments = async (req, res) => {
         res.json(pending);
     } catch (error) {
         console.error('Error fetching pending documents:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };

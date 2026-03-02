@@ -2,22 +2,22 @@ const express = require('express');
 const router = express.Router();
 const documentController = require('../controllers/documentController');
 const authMiddleware = require('../middleware/auth');
-const { checkPermission } = require('../middleware/permissions');
+const { checkPermission, filterClientAccess } = require('../middleware/permissions');
 
 // Get all pending documents for review (partner/seniorCA only)
 router.get('/documents/pending', authMiddleware, checkPermission('document:verify'), documentController.getPendingDocuments);
 
 // Get presigned upload URL (all authenticated users can upload)
-router.post('/:clientId/documents/upload-url', authMiddleware, checkPermission('document:upload'), documentController.getUploadUrl);
+router.post('/:clientId/documents/upload-url', authMiddleware, filterClientAccess, checkPermission('document:upload'), documentController.getUploadUrl);
 
 // Confirm upload completed
-router.post('/:clientId/documents/:documentId/confirm', authMiddleware, documentController.confirmUpload);
+router.post('/:clientId/documents/:documentId/confirm', authMiddleware, filterClientAccess, documentController.confirmUpload);
 
 // List documents for a client
-router.get('/:clientId/documents', authMiddleware, documentController.getDocuments);
+router.get('/:clientId/documents', authMiddleware, filterClientAccess, documentController.getDocuments);
 
 // Get presigned download URL
-router.get('/:clientId/documents/:documentId/download-url', authMiddleware, documentController.getDownloadUrl);
+router.get('/:clientId/documents/:documentId/download-url', authMiddleware, filterClientAccess, documentController.getDownloadUrl);
 
 // Verify a document (partner, seniorCA only)
 router.put('/:clientId/documents/:documentId/verify', authMiddleware, checkPermission('document:verify'), documentController.verifyDocument);

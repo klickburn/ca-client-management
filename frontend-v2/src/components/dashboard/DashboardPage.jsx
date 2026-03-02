@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
 import { clientService } from '@/services/clientService';
@@ -12,6 +13,7 @@ import StatCard from './StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Users, UserCircle, ListTodo, IndianRupee,
   AlertTriangle, Clock, CheckCircle2, Activity,
@@ -31,6 +33,7 @@ export default function DashboardPage() {
   const [recentTasks, setRecentTasks] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [pendingDocs, setPendingDocs] = useState([]);
+  const [rejectDoc, setRejectDoc] = useState(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -53,8 +56,8 @@ export default function DashboardPage() {
         }
 
         if (canViewActivity) {
-          const activities = await activityService.getActivities({ limit: 8 });
-          setRecentActivity(activities);
+          const activityResult = await activityService.getActivities({ limit: 8 });
+          setRecentActivity(activityResult.activities || activityResult);
         }
 
         if (canVerifyDocs) {
@@ -84,19 +87,19 @@ export default function DashboardPage() {
     try {
       await documentService.verifyDocument(doc.clientId, doc.documentId);
       setPendingDocs((prev) => prev.filter((d) => d.documentId !== doc.documentId));
+      toast.success('Document approved');
     } catch (error) {
-      console.error('Error approving document:', error);
+      toast.error('Failed to approve document');
     }
   };
 
-  const handleRejectDoc = async (doc) => {
-    const reason = prompt('Reason for rejection:');
-    if (reason === null) return;
+  const handleRejectDoc = async (doc, reason) => {
     try {
       await documentService.rejectDocument(doc.clientId, doc.documentId, reason);
       setPendingDocs((prev) => prev.filter((d) => d.documentId !== doc.documentId));
+      toast.success('Document rejected');
     } catch (error) {
-      console.error('Error rejecting document:', error);
+      toast.error('Failed to reject document');
     }
   };
 
@@ -179,7 +182,7 @@ export default function DashboardPage() {
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-green-500 hover:text-green-400 hover:bg-green-500/10" onClick={() => handleApproveDoc(doc)}>
                       <CheckCircle size={15} />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleRejectDoc(doc)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={() => setRejectDoc(doc)}>
                       <XCircle size={15} />
                     </Button>
                   </div>
@@ -260,6 +263,18 @@ export default function DashboardPage() {
           </Card>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!rejectDoc}
+        onOpenChange={(v) => !v && setRejectDoc(null)}
+        title="Reject document"
+        description={`Reject "${rejectDoc?.name}"?`}
+        confirmLabel="Reject"
+        prompt
+        promptLabel="Reason for rejection"
+        promptPlaceholder="Enter reason..."
+        onConfirm={(reason) => handleRejectDoc(rejectDoc, reason)}
+      />
     </div>
   );
 }

@@ -59,7 +59,7 @@ exports.getFilingsByClient = async (req, res) => {
 
     res.json(filings);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching filings', error: error.message });
+    res.status(500).json({ message: 'Error fetching filings' });
   }
 };
 
@@ -74,7 +74,7 @@ exports.createFiling = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({ message: 'Filing already exists for this type/period/year' });
     }
-    res.status(500).json({ message: 'Error creating filing', error: error.message });
+    res.status(500).json({ message: 'Error creating filing' });
   }
 };
 
@@ -99,7 +99,7 @@ exports.updateFiling = async (req, res) => {
     if (!filing) return res.status(404).json({ message: 'Filing not found' });
     res.json(filing);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating filing', error: error.message });
+    res.status(500).json({ message: 'Error updating filing' });
   }
 };
 
@@ -110,7 +110,7 @@ exports.deleteFiling = async (req, res) => {
     if (!filing) return res.status(404).json({ message: 'Filing not found' });
     res.json({ message: 'Filing deleted' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting filing', error: error.message });
+    res.status(500).json({ message: 'Error deleting filing' });
   }
 };
 
@@ -157,7 +157,7 @@ exports.generateFilings = async (req, res) => {
 
     res.json({ message: `Generated ${created.length} filings, skipped ${skipped.length}`, created, skipped });
   } catch (error) {
-    res.status(500).json({ message: 'Error generating filings', error: error.message });
+    res.status(500).json({ message: 'Error generating filings' });
   }
 };
 
@@ -189,6 +189,6 @@ exports.getFilingStats = async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching filing stats', error: error.message });
+    res.status(500).json({ message: 'Error fetching filing stats' });
   }
 };

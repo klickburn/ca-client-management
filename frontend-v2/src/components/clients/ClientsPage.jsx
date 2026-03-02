@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { clientService } from '@/services/clientService';
 import { usePermission } from '@/hooks/usePermission';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { GridSkeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Trash2, Phone, Mail } from 'lucide-react';
 
 const CLIENT_TYPES = ['Individual', 'Partnership', 'LLP', 'Pvt Ltd', 'Public Ltd', 'HUF', 'Other'];
@@ -24,6 +27,7 @@ export default function ClientsPage() {
   const navigate = useNavigate();
   const canCreate = usePermission('client:create');
   const canDelete = usePermission('client:delete');
+  const [deleteClientId, setDeleteClientId] = useState(null);
 
   useEffect(() => {
     fetchClients();
@@ -40,14 +44,13 @@ export default function ClientsPage() {
     }
   };
 
-  const handleDelete = async (e, clientId) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this client?')) return;
+  const handleDelete = async (clientId) => {
     try {
       await clientService.deleteClient(clientId);
       setClients(clients.filter((c) => c._id !== clientId));
+      toast.success('Client deleted');
     } catch (error) {
-      console.error('Error deleting client:', error);
+      toast.error('Failed to delete client');
     }
   };
 
@@ -76,7 +79,14 @@ export default function ClientsPage() {
     });
 
   if (loading) {
-    return <div className="text-muted-foreground">Loading clients...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div><div className="h-7 w-32 bg-muted animate-pulse rounded" /></div>
+        </div>
+        <GridSkeleton count={6} cols={3} />
+      </div>
+    );
   }
 
   return (
@@ -162,7 +172,7 @@ export default function ClientsPage() {
                   </div>
                   {canDelete && (
                     <button
-                      onClick={(e) => handleDelete(e, client._id)}
+                      onClick={(e) => { e.stopPropagation(); setDeleteClientId(client._id); }}
                       className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
                     >
                       <Trash2 size={14} />
@@ -215,6 +225,15 @@ export default function ClientsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteClientId}
+        onOpenChange={(v) => !v && setDeleteClientId(null)}
+        title="Delete client"
+        description="This will permanently delete the client and all associated data. Are you sure?"
+        confirmLabel="Delete"
+        onConfirm={() => handleDelete(deleteClientId)}
+      />
     </div>
   );
 }

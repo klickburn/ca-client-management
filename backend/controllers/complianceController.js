@@ -35,7 +35,7 @@ exports.getCalendar = async (req, res) => {
 
         res.json({ fiscalYear, deadlines });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -181,7 +181,7 @@ exports.generateTasks = async (req, res) => {
         });
     } catch (error) {
         console.error('Error generating tasks:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -243,7 +243,7 @@ exports.sendDeadlineAlerts = async (req, res) => {
         res.json({ message: `Sent ${notificationsSent} deadline alerts` });
     } catch (error) {
         console.error('Error sending alerts:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -280,10 +280,12 @@ exports.getDocumentChecklist = async (req, res) => {
 
         const total = items.length;
         const collected = items.filter(i => i.uploaded).length;
+        const requiredTotal = items.filter(i => i.required).length;
+        const requiredCollected = items.filter(i => i.required && i.uploaded).length;
 
-        res.json({ taskType, items, total, collected });
+        res.json({ taskType, items, total, collected, requiredTotal, requiredCollected });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 

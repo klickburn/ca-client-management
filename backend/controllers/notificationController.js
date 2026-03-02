@@ -8,7 +8,7 @@ const getNotifications = async (req, res) => {
             .limit(50);
         res.json(notifications);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -18,7 +18,7 @@ const getUnreadCount = async (req, res) => {
         const count = await Notification.countDocuments({ recipient: req.user.id, read: false });
         res.json({ count });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -28,7 +28,7 @@ const markAsRead = async (req, res) => {
         await Notification.findByIdAndUpdate(req.params.id, { read: true });
         res.json({ message: 'Marked as read' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -38,7 +38,7 @@ const markAllRead = async (req, res) => {
         await Notification.updateMany({ recipient: req.user.id, read: false }, { read: true });
         res.json({ message: 'All marked as read' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 

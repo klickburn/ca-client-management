@@ -109,7 +109,7 @@ exports.getClients = async (req, res) => {
         const clients = await Client.find(req.clientFilter || {});
         res.status(200).json(clients);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -132,7 +132,7 @@ exports.getClientById = async (req, res) => {
 
         res.status(200).json(client);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -169,7 +169,7 @@ exports.getPortalCredentials = async (req, res) => {
         }
         res.json({ hasAccount: true, username: clientUser.username });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -186,7 +186,7 @@ exports.resetPortalPassword = async (req, res) => {
         await logActivity('client:update', req.user.id, req.params.id, `Reset portal password for client`);
         res.json({ username: clientUser.username, password: newPassword });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -210,6 +210,6 @@ exports.deleteClient = async (req, res) => {
         await logActivity('client:delete', req.user.id, client._id, `Deleted client: ${client.name}`);
         res.status(204).send();
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 };
