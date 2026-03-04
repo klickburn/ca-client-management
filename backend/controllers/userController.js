@@ -78,7 +78,7 @@ exports.getAllUsers = async (req, res) => {
             { $group: {
                 _id: '$assignedTo',
                 total: { $sum: 1 },
-                open: { $sum: { $cond: [{ $nin: ['$status', ['completed']] }, 1, 0] } },
+                open: { $sum: { $cond: [{ $not: { $in: ['$status', ['completed']] } }, 1, 0] } },
                 completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
                 overdue: { $sum: { $cond: [{ $and: [{ $ne: ['$status', 'completed'] }, { $lt: ['$dueDate', new Date()] }] }, 1, 0] } },
             }},
