@@ -114,16 +114,16 @@ export default function DashboardPage() {
 
       {/* Main Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title={canViewFull ? 'Total Clients' : 'Your Clients'} value={stats.clients} icon={Users} />
+        <StatCard title={canViewFull ? 'Total Clients' : 'Your Clients'} value={stats.clients} icon={Users} onClick={() => navigate('/clients')} />
         {canManageTeam && (
-          <StatCard title="Team Members" value={stats.users} icon={UserCircle} />
+          <StatCard title="Team Members" value={stats.users} icon={UserCircle} onClick={() => navigate('/team')} />
         )}
-        <StatCard title="Open Tasks" value={(taskStats.pending || 0) + (taskStats.in_progress || 0)} icon={ListTodo} />
+        <StatCard title="Open Tasks" value={(taskStats.pending || 0) + (taskStats.in_progress || 0)} icon={ListTodo} onClick={() => navigate('/tasks?status=pending')} />
         {canVerifyDocs && pendingDocs.length > 0 && (
-          <StatCard title="Docs to Review" value={pendingDocs.length} icon={FileCheck} />
+          <StatCard title="Docs to Review" value={pendingDocs.length} icon={FileCheck} onClick={() => navigate('/clients')} />
         )}
         {(taskStats.overdue || 0) > 0 && (
-          <StatCard title="Overdue" value={taskStats.overdue} icon={AlertTriangle} />
+          <StatCard title="Overdue" value={taskStats.overdue} icon={AlertTriangle} onClick={() => navigate('/tasks?status=overdue')} />
         )}
       </div>
 
@@ -136,7 +136,7 @@ export default function DashboardPage() {
               <p className="text-xl font-bold text-orange-500">{taskStats.dueSoon || 0}</p>
             </CardContent>
           </Card>
-          <Card className="border-0 bg-card cursor-pointer hover:bg-secondary transition-colors" onClick={() => navigate('/tasks')}>
+          <Card className="border-0 bg-card cursor-pointer hover:bg-secondary transition-colors" onClick={() => navigate('/tasks?status=completed')}>
             <CardContent className="pt-4 pb-3 px-4">
               <p className="text-xs text-muted-foreground">Completed Tasks</p>
               <p className="text-xl font-bold text-green-500">{taskStats.completed || 0}</p>
@@ -215,7 +215,7 @@ export default function DashboardPage() {
                 {recentTasks.map((task) => {
                   const overdue = task.status !== 'completed' && new Date(task.dueDate) < new Date();
                   return (
-                    <div key={task._id} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-muted/50">
+                    <div key={task._id} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors" onClick={() => navigate('/tasks')}>
                       {overdue ? (
                         <AlertTriangle size={14} className="text-red-500 shrink-0" />
                       ) : (

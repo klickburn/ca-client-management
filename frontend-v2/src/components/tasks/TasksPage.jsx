@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { taskService } from '@/services/taskService';
 import { clientService } from '@/services/clientService';
@@ -79,12 +80,13 @@ export default function TasksPage() {
   const { user } = useAuth();
   const canCreate = usePermission('task:create');
   const canDelete = usePermission('task:delete');
+  const [searchParams] = useSearchParams();
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || 'all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterClient, setFilterClient] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');

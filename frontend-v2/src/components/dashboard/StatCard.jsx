@@ -1,8 +1,8 @@
 import { Card, CardContent } from '@/components/ui/card';
 
-export default function StatCard({ title, value, icon: Icon }) {
+export default function StatCard({ title, value, icon: Icon, onClick }) {
   return (
-    <Card className="border-0 bg-card">
+    <Card className={`border-0 bg-card${onClick ? ' cursor-pointer hover:bg-secondary transition-colors' : ''}`} onClick={onClick}>
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <div>
